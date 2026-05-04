@@ -29,22 +29,27 @@ static void print_monomial_mahler(FILE *eqs, FILE *out, long i, const void *raw_
     }
 }
 
-static long compute_image_size(mpz_t *S, long N)
+static long compute_image_size(mpz_t *S, const char *known, long N, long *out_n_known)
 {
     long unique = 0L;
+    long n_known = 0L;
     for (long i = 0L; i < N; i++) {
+        if (known && !known[i]) continue;
+        n_known++;
         int is_new = 1;
         for (long j = 0L; j < i; j++) {
+            if (known && !known[j]) continue;
             if (mpz_cmp(S[i], S[j]) == 0) { is_new = 0; break; }
         }
         if (is_new) unique++;
     }
+    if (out_n_known) *out_n_known = n_known;
     return unique;
 }
 
 static const char mahler_usage[] =
     "Usage: serintode mahler <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]\n"
-    "                                     [--k-min=N] [--k-max=N]\n";
+    "                                     [--k-min=N] [--k-max=N] [--sparse]\n";
 
 static int mahler_run(int argc, char *argv[])
 {
@@ -53,6 +58,7 @@ static int mahler_run(int argc, char *argv[])
     long MAX_COEFFS = 400L;
     long K_MIN = 2L;
     long K_MAX = 10L;
+    int sparse = 0;
 
     static const struct option long_opts[] = {
         {"checks",     required_argument, 0, 'c'},
@@ -60,6 +66,7 @@ static int mahler_run(int argc, char *argv[])
         {"max-coeffs", required_argument, 0, 'M'},
         {"k-min",      required_argument, 0, 'a'},
         {"k-max",      required_argument, 0, 'b'},
+        {"sparse",     no_argument,       0, 's'},
         {"help",       no_argument,       0, 'h'},
         {0, 0, 0, 0}
     };
@@ -73,6 +80,7 @@ static int mahler_run(int argc, char *argv[])
             case 'M': MAX_COEFFS = atol(optarg); break;
             case 'a': K_MIN = atol(optarg); break;
             case 'b': K_MAX = atol(optarg); break;
+            case 's': sparse = 1; break;
             case 'h': fputs(mahler_usage, stdout); return EXIT_SUCCESS;
             case '?': return EXIT_FAILURE;
         }
@@ -88,11 +96,14 @@ static int mahler_run(int argc, char *argv[])
     time(&start);
 
     mpz_t *S = NULL;
-    long NUM_COEFFS = read_series(finname, MAX_COEFFS, &S);
+    char *known = NULL;
+    long NUM_COEFFS = sparse
+        ? read_sparse_series(finname, MAX_COEFFS, &S, &known)
+        : read_series(finname, MAX_COEFFS, &S);
 
     mpz_t *M = (mpz_t *) s_malloc(MAX_COEFFS * MAX_COEFFS * sizeof(mpz_t));
 
-    printf("File %s:\n", finname);
+    printf("File %s%s:\n", finname, sparse ? " (sparse)" : "");
 
     mpz_t *N = NULL;
     long nulldim = 0L;
@@ -116,28 +127,54 @@ static int mahler_run(int argc, char *argv[])
                 numterms = n + 1L;
                 COLUMNS = numterms * (Di + 1L);
                 ROWS = COLUMNS + NUM_CHECKS;
-                printf("Mahler k=%ld order=%ld poly-deg=%ld checks=%ld size=%ldx%ld\n",
-                       k, n, Di, NUM_CHECKS, ROWS, COLUMNS);
 
                 for (long col = 0L; col < COLUMNS; col++)
                     for (long row = 0L; row < ROWS; row++)
                         mpz_init(M[row*COLUMNS + col]);
 
-                for (long row = 0L; row < ROWS; row++) {
+                long row_max = (sparse && NUM_COEFFS > ROWS) ? NUM_COEFFS : ROWS;
+                long effective_rows = 0L;
+                for (long src_row = 0L; src_row < row_max && effective_rows < ROWS; src_row++) {
+                    int usable = 1;
+                    if (known) {
+                        for (long i_term = 0L; i_term <= n && usable; i_term++) {
+                            for (long j_poly = 0L; j_poly <= Di && usable; j_poly++) {
+                                if (j_poly > src_row) continue;
+                                long diff = src_row - j_poly;
+                                if (diff % ki_pow[i_term] != 0L) continue;
+                                long ai_idx = diff / ki_pow[i_term];
+                                if (ai_idx >= NUM_COEFFS) continue;
+                                if (!known[ai_idx]) usable = 0;
+                            }
+                        }
+                    }
+                    if (!usable) continue;
                     for (long i_term = 0L; i_term <= n; i_term++) {
                         for (long j_poly = 0L; j_poly <= Di; j_poly++) {
-                            if (j_poly > row) continue;
-                            long diff = row - j_poly;
+                            if (j_poly > src_row) continue;
+                            long diff = src_row - j_poly;
                             if (diff % ki_pow[i_term] != 0L) continue;
                             long ai_idx = diff / ki_pow[i_term];
                             if (ai_idx >= NUM_COEFFS) continue;
                             long col = j_poly * numterms + i_term;
-                            mpz_set(M[row*COLUMNS + col], S[ai_idx]);
+                            mpz_set(M[effective_rows*COLUMNS + col], S[ai_idx]);
                         }
                     }
+                    effective_rows++;
                 }
 
-                nulldim = compute_nullspace(ROWS, COLUMNS, M, &N);
+                printf("Mahler k=%ld order=%ld poly-deg=%ld checks=%ld size=%ldx%ld%s\n",
+                       k, n, Di, NUM_CHECKS, effective_rows, COLUMNS,
+                       (sparse && effective_rows < ROWS) ? " (sparse, fewer rows)" : "");
+
+                if (effective_rows < COLUMNS + 1L) {
+                    for (long col = 0L; col < COLUMNS; col++)
+                        for (long row = 0L; row < ROWS; row++)
+                            mpz_clear(M[row*COLUMNS + col]);
+                    continue;
+                }
+
+                nulldim = compute_nullspace(effective_rows, COLUMNS, M, &N);
 
                 for (long col = 0L; col < COLUMNS; col++)
                     for (long row = 0L; row < ROWS; row++)
@@ -162,8 +199,10 @@ static int mahler_run(int argc, char *argv[])
     }
     (void) max_mahler_bound_for_k;
 
-    long image_size = compute_image_size(S, NUM_COEFFS);
+    long n_known = 0L;
+    long image_size = compute_image_size(S, known, NUM_COEFFS, &n_known);
     free_series(S, NUM_COEFFS);
+    free(known);
     free(M);
 
     if (found) {
@@ -172,7 +211,8 @@ static int mahler_run(int argc, char *argv[])
         printf("*Confidence level: %02ld%%*\n",
                (long) floor(100.0 - 100.0 * (mahler_order + 1L) * (picked.max_poly_order + 1L)
                             / (double)(NUM_COEFFS - mahler_order)));
-        printf("*Image size: %ld of %ld terms*\n", image_size, NUM_COEFFS);
+        if (sparse) printf("*Image size: %ld of %ld known terms*\n", image_size, n_known);
+        else        printf("*Image size: %ld of %ld terms*\n", image_size, NUM_COEFFS);
         printf("***********************\n\n");
 
         char fouteqsname[4096];

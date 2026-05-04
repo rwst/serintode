@@ -6,8 +6,8 @@ It ships as a single dispatcher binary `serintode` with five subcommands:
   serintode nonlin     <input> [--checks=N] [--min-order=N] [--max-coeffs=N]
                                [--min-depth=N] [--max-depth=N] [--lookup-dir=PATH]
   serintode mahler     <input> [--checks=N] [--min-order=N] [--max-coeffs=N]
-                               [--k-min=N] [--k-max=N]
-  serintode kkernel    <input> [--k=N] [--max-depth=N] [--max-coeffs=N]
+                               [--k-min=N] [--k-max=N] [--sparse]
+  serintode kkernel    <input> [--k=N] [--max-depth=N] [--max-coeffs=N] [--sparse]
   serintode makelookup <max-ode-order> <num-coeffs>
 
 `linear` searches for linear ODEs. `nonlin` searches for algebraic (nonlinear) ODEs up to the given depth. `mahler` searches for Mahler functional equations `sum_i p_i(x) f(x^(k^i)) = 0`, the structural detector for k-regular sequences (Allouche-Shallit). `kkernel` is a diagnostic: it computes the rank of the Q-span of the k-kernel `{(a_{k^i n + j})_n}` per depth — the rank stabilises iff the sequence is k-regular. `makelookup` precomputes the term-exponent tables that `nonlin --lookup-dir=lookuptables` reads (a speed optimisation; without the flag, the tables are enumerated in-process).
@@ -16,7 +16,7 @@ A separate FLINT-based prototype `serintode_flint.c` exists but is out of scope 
 
 The program automatically determines the number of coefficients in the input file and searches for ODEs of increasing order, polynomial-coefficient degree, and (for nonlin) nonlinearity depth, according to the number of coefficients and the number of checks required. It outputs the result both to stdout and to a file `<input>_<mode>_<NUM_CHECKS>-checks.txt` if a solution is found.
 
-Input files should have one base-10 integer coefficient per line. Leading zero coefficients are stripped automatically.
+Input files should have one base-10 integer coefficient per line. Leading zero coefficients are stripped automatically. The `mahler` and `kkernel` subcommands also accept `--sparse`, which switches the parser to "<index> <value>" tuples per line (blank lines and #-comment lines are skipped). With --sparse, indices may be discontiguous: rows in the search matrix that depend on missing values are skipped (mahler), or columns at unknown positions are excluded (kkernel). Linear/nonlin do not support --sparse — they require contiguous windows of values.
 
 If there are more than 10,000 coefficients, raise `--max-coeffs` accordingly.
 

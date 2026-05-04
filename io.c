@@ -85,6 +85,120 @@ void free_series(mpz_t *S, long count)
     free(S);
 }
 
+long read_sparse_series(const char *finname, long max_coeffs,
+                        mpz_t **out_S, char **out_known)
+{
+    FILE *fin = fopen(finname, "r");
+    if (fin == NULL) {
+        fprintf(stderr, "Error: Could not open input file %s. %s\n",
+                finname, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    char *input_string = (char *) s_malloc((MAX_LINE_LENGTH + 1L) * sizeof(char));
+
+    /* Single-pass: pull (index, value-string) pairs into a growing buffer,
+     * then materialize the (S, known) arrays once we know max index.
+     * Avoids rewind() so it works on pipes / non-seekable streams. */
+    long capacity = 64L;
+    long count = 0L;
+    long *idx_buf = (long *) s_malloc(capacity * sizeof(long));
+    char **val_buf = (char **) s_malloc(capacity * sizeof(char *));
+
+    long max_n = -1L;
+    long line_no = 0L;
+    while (fgets(input_string, MAX_LINE_LENGTH, fin) != NULL) {
+        line_no++;
+        char *p = input_string;
+        while (*p == ' ' || *p == '\t') p++;
+        if (*p == '\0' || *p == '\n' || *p == '#') continue;
+        char *endptr;
+        long n = strtol(p, &endptr, 10);
+        if (endptr == p) {
+            fprintf(stderr, "Error: malformed index at line %ld of %s.\n",
+                    line_no, finname);
+            exit(EXIT_FAILURE);
+        }
+        if (n < 0L) {
+            fprintf(stderr, "Error: negative index %ld at line %ld of %s.\n",
+                    n, line_no, finname);
+            exit(EXIT_FAILURE);
+        }
+        if (n >= max_coeffs) {
+            fprintf(stderr, "Error: index %ld at line %ld of %s exceeds --max-coeffs=%ld.\n",
+                    n, line_no, finname, max_coeffs);
+            exit(EXIT_FAILURE);
+        }
+        p = endptr;
+        while (*p == ' ' || *p == '\t') p++;
+        char *end_v = p + strlen(p);
+        while (end_v > p && (end_v[-1] == ' ' || end_v[-1] == '\t' ||
+                             end_v[-1] == '\n' || end_v[-1] == '\r')) end_v--;
+        *end_v = '\0';
+        if (*p == '\0') {
+            fprintf(stderr, "Error: missing value at line %ld of %s.\n",
+                    line_no, finname);
+            exit(EXIT_FAILURE);
+        }
+        if (count >= capacity) {
+            capacity *= 2L;
+            long *new_idx = (long *) realloc(idx_buf, capacity * sizeof(long));
+            char **new_val = (char **) realloc(val_buf, capacity * sizeof(char *));
+            if (new_idx == NULL || new_val == NULL) {
+                fprintf(stderr, "out of memory growing sparse buffer (capacity %ld)\n", capacity);
+                exit(EXIT_FAILURE);
+            }
+            idx_buf = new_idx;
+            val_buf = new_val;
+        }
+        idx_buf[count] = n;
+        val_buf[count] = strdup(p);
+        if (val_buf[count] == NULL) {
+            fprintf(stderr, "out of memory copying value at line %ld\n", line_no);
+            exit(EXIT_FAILURE);
+        }
+        count++;
+        if (n > max_n) max_n = n;
+    }
+    if (ferror(fin)) {
+        fprintf(stderr, "Error reading %s. %s\n", finname, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    fclose(fin);
+    free(input_string);
+
+    if (max_n < 0L) {
+        fprintf(stderr, "Error: %s has no data.\n", finname);
+        exit(EXIT_FAILURE);
+    }
+
+    long N = max_n + 1L;
+    mpz_t *S = (mpz_t *) s_malloc(N * sizeof(mpz_t));
+    char *known = (char *) s_calloc(N, sizeof(char));
+    for (long i = 0L; i < N; i++) mpz_init(S[i]);
+
+    for (long i = 0L; i < count; i++) {
+        long n = idx_buf[i];
+        if (known[n]) {
+            fprintf(stderr, "Error: duplicate index %ld in %s.\n", n, finname);
+            exit(EXIT_FAILURE);
+        }
+        if (mpz_set_str(S[n], val_buf[i], 10) != 0) {
+            fprintf(stderr, "Error: malformed value '%s' for index %ld in %s.\n",
+                    val_buf[i], n, finname);
+            exit(EXIT_FAILURE);
+        }
+        known[n] = 1;
+        free(val_buf[i]);
+    }
+    free(idx_buf);
+    free(val_buf);
+
+    *out_S = S;
+    *out_known = known;
+    return N;
+}
+
 void print_ode(FILE *eqs, FILE *out,
                mpz_t *N, long numterms, long max_poly_order,
                long stride, long bestnulldim,

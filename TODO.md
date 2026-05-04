@@ -134,6 +134,33 @@ The IML precision constraint
       our implementation is wrong, worth resolving as part of the
       cross-check.
 
+## Sparse-data support
+
+`mahler` and `kkernel` accept `--sparse`, which switches the parser to
+`<index> <value>` tuples and gates matrix rows/columns by a `known[]`
+bitmap. Linear and nonlin do not — they need contiguous index windows.
+
+- [ ] **Extend `--sparse` to `linear`.** Each linear row N needs a
+      contiguous window of `a_n` values for `n` in
+      `[N-MAX_POLY_ORDER, N+ODE_ORDER]` (per the matrix entry
+      `(j+k-i)!/(k-i)! · a_{j+k-i}` in the existing builder). Add the
+      same row-skip pattern as in `modes_mahler.c`: for each candidate
+      row N, walk the window and verify every index is in `known[]`;
+      otherwise skip. ~30 LOC in `modes_linear.c`. Useful when data has
+      a long contiguous prefix with isolated scattered holes; brittle
+      if holes are dense or periodic.
+
+- [ ] **Extend `--sparse` to `nonlin`.** Harder: the convolution table
+      `S[i][k]` (in `modes_nonlin.c`) is built from `D[j][k-l]` for all
+      `l ≤ k`, so each `S[i][k]` depends on a contiguous prefix of
+      `D[j]`. With holes in the input, the derivative table cannot be
+      built past the first hole. Two options: (a) restrict to the
+      longest contiguous prefix of known indices (cheap but wasteful),
+      (b) propagate the `known[]` mask through the convolution and
+      mark `S[i][k]` unknown wherever any contributor was unknown
+      (more bookkeeping). Several hundred LOC; weigh against whether
+      sparse-data algebraic search is actually called for in practice.
+
 ## Out of scope of this audit
 
 - [ ] `old/serintode_iml.c`, `old/serintode_nonlin2.c`,

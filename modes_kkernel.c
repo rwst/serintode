@@ -9,18 +9,20 @@
 #include "solver.h"
 
 static const char kkernel_usage[] =
-    "Usage: serintode kkernel <input-file> [--k=N] [--max-depth=N] [--max-coeffs=N]\n";
+    "Usage: serintode kkernel <input-file> [--k=N] [--max-depth=N] [--max-coeffs=N] [--sparse]\n";
 
 static int kkernel_run(int argc, char *argv[])
 {
     long K = 2L;
     long MAX_DEPTH = 6L;
     long MAX_COEFFS = 1000L;
+    int sparse = 0;
 
     static const struct option long_opts[] = {
         {"k",          required_argument, 0, 'k'},
         {"max-depth",  required_argument, 0, 'd'},
         {"max-coeffs", required_argument, 0, 'M'},
+        {"sparse",     no_argument,       0, 's'},
         {"help",       no_argument,       0, 'h'},
         {0, 0, 0, 0}
     };
@@ -32,6 +34,7 @@ static int kkernel_run(int argc, char *argv[])
             case 'k': K = atol(optarg); break;
             case 'd': MAX_DEPTH = atol(optarg); break;
             case 'M': MAX_COEFFS = atol(optarg); break;
+            case 's': sparse = 1; break;
             case 'h': fputs(kkernel_usage, stdout); return EXIT_SUCCESS;
             case '?': return EXIT_FAILURE;
         }
@@ -49,8 +52,12 @@ static int kkernel_run(int argc, char *argv[])
     setvbuf(stdout, NULL, _IONBF, 0);
 
     mpz_t *S = NULL;
-    long N = read_series(finname, MAX_COEFFS, &S);
-    printf("File %s, k=%ld, depths 0..%ld, N=%ld\n", finname, K, MAX_DEPTH, N);
+    char *known = NULL;
+    long N = sparse
+        ? read_sparse_series(finname, MAX_COEFFS, &S, &known)
+        : read_series(finname, MAX_COEFFS, &S);
+    printf("File %s%s, k=%ld, depths 0..%ld, N=%ld\n",
+           finname, sparse ? " (sparse)" : "", K, MAX_DEPTH, N);
     printf("(rank of Q-span of {a(k^i*n + j) : 0<=i<=depth, 0<=j<k^i})\n");
     printf("k-regular  <=>  rank stabilises as depth grows.\n\n");
 
@@ -77,33 +84,68 @@ static int kkernel_run(int argc, char *argv[])
             continue;
         }
 
+        long L_eff = L;
+        char *col_usable = NULL;
+        if (known) {
+            col_usable = (char *) s_malloc(L * sizeof(char));
+            for (long n = 0L; n < L; n++) col_usable[n] = 1;
+            long pwr = 1L;
+            for (long i = 0L; i <= depth; i++) {
+                for (long j = 0L; j < pwr; j++) {
+                    for (long n = 0L; n < L; n++) {
+                        long src = pwr * n + j;
+                        if (src >= N || !known[src]) col_usable[n] = 0;
+                    }
+                }
+                pwr *= K;
+            }
+            L_eff = 0L;
+            for (long n = 0L; n < L; n++) if (col_usable[n]) L_eff++;
+        }
+        if (L_eff <= 0L) {
+            printf("  depth=%ld: rows=%ld, common-length=%ld, no usable columns\n",
+                   depth, total_rows, L);
+            free(col_usable);
+            continue;
+        }
+
         long rows = total_rows;
-        mpz_t *M = (mpz_t *) s_malloc(rows * L * sizeof(mpz_t));
-        for (long i = 0L; i < rows*L; i++) mpz_init(M[i]);
+        mpz_t *M = (mpz_t *) s_malloc(rows * L_eff * sizeof(mpz_t));
+        for (long i = 0L; i < rows*L_eff; i++) mpz_init(M[i]);
 
         long row_idx = 0L;
         power = 1L;
         for (long i = 0L; i <= depth; i++) {
             for (long j = 0L; j < power; j++) {
+                long col_dst = 0L;
                 for (long n = 0L; n < L; n++) {
+                    if (col_usable && !col_usable[n]) continue;
                     long src = power * n + j;
-                    if (src < N) mpz_set(M[row_idx*L + n], S[src]);
+                    if (src < N) mpz_set(M[row_idx*L_eff + col_dst], S[src]);
+                    col_dst++;
                 }
                 row_idx++;
             }
             power *= K;
         }
 
-        long rank = compute_rank(rows, L, M);
+        long rank = compute_rank(rows, L_eff, M);
 
-        for (long i = 0L; i < rows*L; i++) mpz_clear(M[i]);
+        for (long i = 0L; i < rows*L_eff; i++) mpz_clear(M[i]);
         free(M);
+        free(col_usable);
 
-        printf("  depth=%ld: rows=%ld, common-length=%ld, rank=%ld\n",
-               depth, rows, L, rank);
+        if (sparse && L_eff < L) {
+            printf("  depth=%ld: rows=%ld, common-length=%ld (of %ld), rank=%ld\n",
+                   depth, rows, L_eff, L, rank);
+        } else {
+            printf("  depth=%ld: rows=%ld, common-length=%ld, rank=%ld\n",
+                   depth, rows, L, rank);
+        }
     }
 
     free_series(S, N);
+    free(known);
     return EXIT_SUCCESS;
 }
 

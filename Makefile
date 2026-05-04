@@ -62,6 +62,14 @@ test: serintode
 	@diff -u tests/expected/thue_morse_kkernel.txt \
 	         tests/thue_morse.txt_kkernel.out \
 	    && echo "PASS: kkernel (Thue-Morse, rank stabilises at 1)"
+	@./serintode mahler --sparse --checks=6 tests/thue_morse_sparse.txt > /dev/null
+	@diff -u tests/expected/thue_morse_sparse_mahler.txt \
+	         tests/thue_morse_sparse.txt_mahler_6-checks.txt \
+	    && echo "PASS: mahler --sparse (Thue-Morse with 8 holes, recovers eqn)"
+	@./serintode kkernel --sparse --max-depth=4 tests/thue_morse_sparse.txt > tests/thue_morse_sparse.txt_kkernel.out
+	@diff -u tests/expected/thue_morse_sparse_kkernel.txt \
+	         tests/thue_morse_sparse.txt_kkernel.out \
+	    && echo "PASS: kkernel --sparse (Thue-Morse with 8 holes, rank still 1)"
 
 clean:
 	rm -f serintode $(OBJS)
