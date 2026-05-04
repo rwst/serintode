@@ -6,6 +6,7 @@
 #include <math.h>
 #include "gmp.h"
 
+#include "serintode.h"
 #include "io.h"
 #include "solver.h"
 
@@ -24,7 +25,7 @@ static void print_monomial_linear(FILE *eqs, FILE *out, long i, const void *ctx)
     }
 }
 
-int main(int argc, char *argv[])
+static int linear_run(int argc, char *argv[])
 {
     long const NUM_CHECKS = 6L;
     long const MIN_ODE_ORDER = 1L;
@@ -35,8 +36,8 @@ int main(int argc, char *argv[])
     time(&start);
 
     if (argc != 2) {
-        printf("\nUsage: %s <input-file>\n", argv[0]);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Usage: serintode linear <input-file>\n");
+        return EXIT_FAILURE;
     }
     const char *finname = argv[1];
 
@@ -112,12 +113,12 @@ int main(int argc, char *argv[])
 
         char fouteqsname[4096];
         snprintf(fouteqsname, sizeof(fouteqsname),
-                 "%s_solution_%ld-checks.txt", finname, NUM_CHECKS);
+                 "%s_linear_%ld-checks.txt", finname, NUM_CHECKS);
         FILE *fouteqs = fopen(fouteqsname, "w");
         if (fouteqs == NULL) {
             fprintf(stderr, "\nError: Could not open equations output file %s. %s\n",
                     fouteqsname, strerror(errno));
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         }
         setvbuf(fouteqs, NULL, _IOLBF, 32);
 
@@ -137,5 +138,11 @@ int main(int argc, char *argv[])
 
     time(&end);
     printf("\nEllapsed time %.fs\n", difftime(end, start));
-    exit(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
+
+const mode_descriptor mode_linear = {
+    .name = "linear",
+    .description = "Linear ODE search via IML",
+    .run = linear_run,
+};

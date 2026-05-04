@@ -1,6 +1,6 @@
-# Pre-refactor Makefile (Stage 1 of plan.md).
-# Builds the four current in-scope programs and runs regressions
-# against tests/expected/ baselines.
+# Stage 3 of plan.md: dispatcher binary `serintode` subsumes the
+# linear program. Old nonlin and makelookup stay as standalone
+# programs until Stage 4.
 
 CFLAGS       ?= -Wall -O2
 IML_DIR      ?= /home/ralf/math/iml
@@ -9,7 +9,7 @@ LDFLAGS       = -L$(IML_DIR)/lib64
 IML_LDLIBS    = -liml -lcblas -lgmp -lm
 PLAIN_LDLIBS  = -lgmp -lm
 
-PROGS = serintode_iml.o serintode_iml_nonlin.o serintode_iml_nonlin_lookup.o makelookup
+PROGS = serintode serintode_iml_nonlin.o serintode_iml_nonlin_lookup.o makelookup
 
 .PHONY: all clean test
 all: $(PROGS)
@@ -20,8 +20,11 @@ io.o: io.c io.h
 solver.o: solver.c solver.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-serintode_iml.o: serintode_iml.c io.o solver.o io.h solver.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) serintode_iml.c io.o solver.o -o $@ $(LDFLAGS) $(IML_LDLIBS)
+modes_linear.o: modes_linear.c serintode.h io.h solver.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+serintode: serintode.c serintode.h io.o solver.o modes_linear.o
+	$(CC) $(CFLAGS) $(CPPFLAGS) serintode.c io.o solver.o modes_linear.o -o $@ $(LDFLAGS) $(IML_LDLIBS)
 
 serintode_iml_nonlin.o: serintode_iml_nonlin.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $< -o $@ $(LDFLAGS) $(IML_LDLIBS)
@@ -32,10 +35,10 @@ serintode_iml_nonlin_lookup.o: serintode_iml_nonlin_lookup.c
 makelookup: makelookup.c
 	$(CC) $(CFLAGS) $< -o $@ $(PLAIN_LDLIBS)
 
-test: serintode_iml.o serintode_iml_nonlin.o
-	@./serintode_iml.o tests/central_binomials.txt > /dev/null
+test: serintode serintode_iml_nonlin.o
+	@./serintode linear tests/central_binomials.txt > /dev/null
 	@diff -u tests/expected/central_binomials_linear.txt \
-	         tests/central_binomials.txt_solution_6-checks.txt \
+	         tests/central_binomials.txt_linear_6-checks.txt \
 	    && echo "PASS: linear"
 	@./serintode_iml_nonlin.o tests/central_binomials.txt > /dev/null
 	@diff -u tests/expected/central_binomials_nonlin.txt \
@@ -43,4 +46,4 @@ test: serintode_iml.o serintode_iml_nonlin.o
 	    && echo "PASS: nonlin"
 
 clean:
-	rm -f $(PROGS) io.o solver.o
+	rm -f $(PROGS) io.o solver.o modes_linear.o
