@@ -14,16 +14,11 @@ data file — they are robustness, correctness, and quality items.
 
 ## Robustness
 
-- [ ] Double-free / use-after-close in the "couldn't open output equations
-      file" error path: each file calls `fclose(fin)` and `free(M)` again
-      after the main success-path already closed/freed them. `gcc -Wall`
-      flags this with `-Wuse-after-free`. Fix by removing the redundant
-      cleanup in the error branch (or by tracking pointers as NULL after the
-      first close/free).
-  - `serintode_iml.c:359` (vs first `fclose` at `:101`),
-    `serintode_iml.c:366` (vs first `free(M)` at `:323`)
-  - `serintode_iml_nonlin.c:700` (vs `:135`)
-  - `serintode_iml_nonlin_lookup.c:686` (vs `:111`)
+- [x] Double-free / use-after-close in the "couldn't open output equations
+      file" error path: removed the redundant `fclose(fin)` / `free(M)` /
+      `mpz_clear` cleanup from the error branch (the `exit(EXIT_FAILURE)`
+      reclaims everything anyway). `-Wuse-after-free` warnings now silent in
+      all three IML programs.
 
 - [x] Check return value of `mpz_init_set_str` / `mpz_set_str` when parsing
       each line. Errors out with the offending line number; previously a

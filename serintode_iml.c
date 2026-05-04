@@ -16,7 +16,7 @@
 int main()
 {
     time_t start,end;
-    char *finname = "tests/3-colorings.txt"; /*File name of data*/
+    char *finname = "tests/central_binomials.txt"; /*File name of data*/
     long const NUM_CHECKS=6L; /*Should be greater than 0*/
     long const MIN_ODE_ORDER=1L; 
     long const MAX_COEFFS=400; /*Should be checked for very large sequences*/
@@ -366,14 +366,6 @@ int main()
         if (fouteqs==NULL)
         {
             printf("\nError: Could not open equations output file %s. %s\n",fouteqsname,strerror(errno));
-            fclose(fin);
-            //fclose(foutsum);
-            for (i=0L;i<COLUMNS*nulldim;i++)
-            {
-                mpz_clear(N[i]);
-            }
-            free(N);
-            free(M);
             exit(EXIT_FAILURE);
         }
         setvbuf(fouteqs,NULL,_IOLBF,32);

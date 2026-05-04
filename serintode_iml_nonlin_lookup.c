@@ -693,13 +693,6 @@ int main()
         if (fouteqs==NULL)
         {
             printf("\nError: Could not open equations output file %s. %s\n",fouteqsname,strerror(errno));
-            fclose(fin);
-            //fclose(foutsum);
-            for (i=0L;i<COLUMNS*nulldim;i++)
-            {
-                mpz_clear(N[i]);
-            }
-            free(N);
             exit(EXIT_FAILURE);
         }
         setvbuf(fouteqs,NULL,_IOLBF,32);
