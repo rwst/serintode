@@ -13,17 +13,17 @@
 //Output file sum: gives the sequence name of found solutions, the number of coefficients, the ODE order, the largest polynomial order, the number of free variables
 //Output file eqs: gives the sequence name of found solutions, plus the Maple input for the ODE
 
-int main()
+int main(int argc, char *argv[])
 {
-    char *finname = "tests/Chi_high.ser"; /*File name of data*/
+    char *finname; /*File name of data, taken from argv[1]*/
     long const NUM_CHECKS=10L; /*Should be greater than 0*/
-    long const MIN_ODE_ORDER=24L; 
+    long const MIN_ODE_ORDER=24L;
     long const MIN_DEPTH=1L;
     long const MAX_DEPTH=3L; //Choosing 1 equals linear
     long const MAX_COEFFS=4300; /*Should be checked for very large sequences*/
-    long const MAX_LINE_LENGTH=100000L; 
+    long const MAX_LINE_LENGTH=100000L;
     char fname[64]; /*Lookup table filename*/
-    char fouteqsname[64]; /*Output equations file name*/
+    char fouteqsname[4096]; /*Output equations file name*/
     long NUM_COEFFS=0L;
     long MAX_ODE_ORDER=100L; 
     long ODE_ORDER=0L;
@@ -41,7 +41,14 @@ int main()
     
     time(&start);
     setvbuf(stdout,NULL,_IONBF,0);
-    
+
+    if (argc != 2)
+    {
+        printf("\nUsage: %s <input-file>\n",argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    finname = argv[1];
+
     mpz_inits(temp,temp2,coeff,NULL);
 
     fin = fopen(finname,"r");

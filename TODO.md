@@ -54,9 +54,11 @@ data file — they are robustness, correctness, and quality items.
 
 ## Ergonomics
 
-- [ ] Take `finname`, `NUM_CHECKS`, `MIN_ODE_ORDER`, `MAX_COEFFS` from `argv`
-      / a config rather than recompiling. README already calls this out as a
-      known limitation.
+- [x] Take `finname` from `argv[1]` rather than recompiling. Done in all
+      three IML programs; bare invocation now prints
+      `Usage: <prog> <input-file>` and exits non-zero. Other tunables
+      (`NUM_CHECKS`, `MIN_ODE_ORDER`, `MAX_COEFFS`, depth bounds) still
+      require recompiling — escalate to `getopt` if that becomes painful.
 
 ## Maintainability
 

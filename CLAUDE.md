@@ -33,16 +33,18 @@ The `.o` extension is misleading — these are full executables. Library install
 
 ## How to run
 
-`makelookup` is the only program that takes argv:
+All in-scope programs take the input file path as `argv[1]`:
 
 ```
-./makelookup <MAX_ODE_ORDER> <NUM_COEFFS>     # writes lookuptables/o<n>d<p>.txt
+./serintode_iml.o              <input-file>
+./serintode_iml_nonlin.o       <input-file>
+./serintode_iml_nonlin_lookup.o <input-file>
+./makelookup                   <MAX_ODE_ORDER> <NUM_COEFFS>     # writes lookuptables/o<n>d<p>.txt
 ```
 
-**The four `serintode_*` programs take no command-line arguments.** All tunables — input filename, number of checks, minimum ODE order, max coefficients, max depth — are `const` locals at the top of `main()` and must be edited in the source, then recompiled. The relevant block in each file:
+The other tunables — `NUM_CHECKS`, `MIN_ODE_ORDER`, `MAX_COEFFS`, `MAX_LINE_LENGTH`, plus `MIN_DEPTH`/`MAX_DEPTH` on the nonlin variants — are still `const` locals at the top of `main()` and must be edited in the source, then recompiled. The relevant block in each file:
 
 ```c
-char *finname = "tests/...";
 long const NUM_CHECKS = ...;
 long const MIN_ODE_ORDER = ...;
 long const MAX_COEFFS = ...;
@@ -50,7 +52,7 @@ long const MAX_LINE_LENGTH = 100000L;
 // nonlin variants additionally have MIN_DEPTH, MAX_DEPTH
 ```
 
-There is no `tests/` directory in the repo — the hardcoded `finname` paths point to test inputs the user must supply. Input files are plain text, one base-10 integer per line; leading zero coefficients are stripped automatically.
+`tests/central_binomials.txt` is a known-good regression input (OEIS A000984; expected ODE `(1-4x)y' - 2y = 0`). Input files are plain text, one base-10 integer per line; leading zero coefficients are stripped automatically.
 
 Output: when a solution is found, the program writes `<finname>_solution_<NUM_CHECKS>-checks.txt` (linear) or `<finname>_nonlinsol_<NUM_CHECKS>-checks.txt` (nonlin) in Maple syntax, alongside printing it to stdout.
 

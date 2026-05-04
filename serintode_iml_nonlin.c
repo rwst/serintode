@@ -37,17 +37,17 @@ void combs(long **r, long *s, long k, long p, long q, long *arrindex)
     return;  
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    char *finname = "tests/nonlintest.txt"; /*File name of data*/
+    char *finname; /*File name of data, taken from argv[1]*/
     long const NUM_CHECKS=0L; /*Should be greater than 0*/
-    long const MIN_ODE_ORDER=1L; 
+    long const MIN_ODE_ORDER=1L;
     long const MIN_DEPTH=1L;
     long const MAX_DEPTH=10L; //Choosing 1 equals linear
     long const MAX_COEFFS=100; /*Should be checked for very large sequences*/
-    long const MAX_LINE_LENGTH=100000L; 
+    long const MAX_LINE_LENGTH=100000L;
     //char foutsumname[64]; /*Output summary file name*/
-    char fouteqsname[64]; /*Output equations file name*/
+    char fouteqsname[4096]; /*Output equations file name*/
     long NUM_COEFFS=0L;
     long MAX_ODE_ORDER=100L; 
     long ODE_ORDER=0L;
@@ -65,7 +65,14 @@ int main()
     
     time(&start);
     setvbuf(stdout,NULL,_IONBF,0);
-    
+
+    if (argc != 2)
+    {
+        printf("\nUsage: %s <input-file>\n",argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    finname = argv[1];
+
     mpz_inits(temp,temp2,coeff,NULL);
 
     fin = fopen(finname,"r");
