@@ -8,7 +8,7 @@ CPPFLAGS      = -I$(IML_DIR)/include
 LDFLAGS       = -L$(IML_DIR)/lib64
 IML_LDLIBS    = -liml -lcblas -lgmp -lm
 
-OBJS = io.o solver.o modes_linear.o modes_nonlin.o modes_makelookup.o
+OBJS = io.o solver.o modes_linear.o modes_nonlin.o modes_mahler.o modes_makelookup.o
 
 .PHONY: all clean test
 all: serintode
@@ -23,6 +23,9 @@ modes_linear.o: modes_linear.c serintode.h io.h solver.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 modes_nonlin.o: modes_nonlin.c serintode.h io.h solver.h modes_nonlin.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+modes_mahler.o: modes_mahler.c serintode.h io.h solver.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 modes_makelookup.o: modes_makelookup.c serintode.h io.h modes_nonlin.h
@@ -40,6 +43,10 @@ test: serintode
 	@diff -u tests/expected/central_binomials_nonlin.txt \
 	         tests/central_binomials.txt_nonlin_0-checks.txt \
 	    && echo "PASS: nonlin"
+	@./serintode mahler --checks=6 tests/thue_morse.txt > /dev/null
+	@diff -u tests/expected/thue_morse_mahler.txt \
+	         tests/thue_morse.txt_mahler_6-checks.txt \
+	    && echo "PASS: mahler"
 
 clean:
 	rm -f serintode $(OBJS)

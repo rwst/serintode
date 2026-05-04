@@ -10,6 +10,7 @@ Single dispatcher binary `serintode` with subcommands:
 
 - `serintode linear <input>` — linear ODE search. In `modes_linear.c`.
 - `serintode nonlin <input> [--lookup-dir=PATH]` — algebraic (nonlinear) ODE search. In `modes_nonlin.c`. With `--lookup-dir`, reads pre-generated term-exponent tables from `<PATH>/o<n>d<p>.txt`; without it, enumerates compositions in-process via `combs()`.
+- `serintode mahler <input>` — Mahler-equation search (`sum_i p_i(x) f(x^(k^i)) = 0`), the structural detector for k-regular sequences (Allouche–Shallit). Outer loop over base k; by Cobham, takes the first hit. In `modes_mahler.c`. Reuses `select_best_linear`.
 - `serintode makelookup <max-order> <num-coeffs>` — generates the lookup tables. In `modes_makelookup.c`, sharing `combs()` from `modes_nonlin.h`.
 
 Shared code:
@@ -35,12 +36,16 @@ Override `IML_DIR=/path/to/iml` if IML lives somewhere other than `/home/ralf/ma
 ./serintode linear     <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]
 ./serintode nonlin     <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]
                                     [--min-depth=N] [--max-depth=N] [--lookup-dir=PATH]
+./serintode mahler     <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]
+                                    [--k-min=N] [--k-max=N]
 ./serintode makelookup <max-ode-order> <num-coeffs>     # writes lookuptables/o<n>d<p>.txt
 ```
 
-Defaults match the legacy programs: linear `--checks=6 --min-order=1 --max-coeffs=400`; nonlin `--checks=0 --min-order=1 --max-coeffs=100 --min-depth=1 --max-depth=10`.
+Defaults match the legacy programs where applicable: linear `--checks=6 --min-order=1 --max-coeffs=400`; nonlin `--checks=0 --min-order=1 --max-coeffs=100 --min-depth=1 --max-depth=10`; mahler `--checks=6 --min-order=1 --max-coeffs=400 --k-min=2 --k-max=10`.
 
-Input files are plain text, one base-10 integer per line; leading zero coefficients are stripped automatically. `tests/central_binomials.txt` is a known-good linear regression input (OEIS A000984; expected ODE `(1-4x)y' - 2y = 0`).
+Input files are plain text, one base-10 integer per line; leading zero coefficients are stripped automatically. Regression inputs:
+- `tests/central_binomials.txt` (OEIS A000984; expected linear ODE `(1-4x)y' - 2y = 0`).
+- `tests/thue_morse.txt` (±1 Thue–Morse; expected Mahler-2 equation `f(x) = (1-x)·f(x²)`).
 
 Output filename: `<input>_<mode>_<NUM_CHECKS>-checks.txt`, in Maple syntax, also echoed to stdout. `make test` diffs against the baselines in `tests/expected/`.
 
@@ -66,7 +71,7 @@ Output filename: `<input>_<mode>_<NUM_CHECKS>-checks.txt`, in Maple syntax, also
 4. Add `modes_<name>.o` to `OBJS` in the `Makefile`.
 5. Add a regression input under `tests/`, generate the expected output, commit it under `tests/expected/`, extend `make test`.
 
-The forthcoming Mahler mode (see `TODO.md`) is the next planned addition; it'll reuse `select_best_linear`.
+`modes_mahler.c` is the most recent example. It builds its matrix from `M[N][(i,j)] = a_{(N-j)/k^i}` (when `k^i | (N-j)` and the index is in range), uses the same column layout as linear (`col = j*numterms + i`), and reuses `select_best_linear`.
 
 ## Known issues / gotchas
 
