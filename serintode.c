@@ -8,6 +8,7 @@ static const mode_descriptor *all_modes[] = {
     &mode_linear,
     &mode_nonlin,
     &mode_mahler,
+    &mode_kkernel,
     &mode_makelookup,
     NULL,
 };

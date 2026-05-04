@@ -11,6 +11,7 @@ Single dispatcher binary `serintode` with subcommands:
 - `serintode linear <input>` — linear ODE search. In `modes_linear.c`.
 - `serintode nonlin <input> [--lookup-dir=PATH]` — algebraic (nonlinear) ODE search. In `modes_nonlin.c`. With `--lookup-dir`, reads pre-generated term-exponent tables from `<PATH>/o<n>d<p>.txt`; without it, enumerates compositions in-process via `combs()`.
 - `serintode mahler <input>` — Mahler-equation search (`sum_i p_i(x) f(x^(k^i)) = 0`), the structural detector for k-regular sequences (Allouche–Shallit). Outer loop over base k; by Cobham, takes the first hit. In `modes_mahler.c`. Reuses `select_best_linear`.
+- `serintode kkernel <input>` — k-kernel rank diagnostic. Computes `dim_Q span{(a_{k^i n + j})_n : 0 <= i <= depth, 0 <= j < k^i}` for depth = 0..max_depth. The sequence is k-regular iff this rank stabilises. Cheap negative pre-filter for the Mahler search. In `modes_kkernel.c`, using `compute_rank` (cols − nullity via `kernelMP`) from `solver.c`.
 - `serintode makelookup <max-order> <num-coeffs>` — generates the lookup tables. In `modes_makelookup.c`, sharing `combs()` from `modes_nonlin.h`.
 
 Shared code:
@@ -38,6 +39,7 @@ Override `IML_DIR=/path/to/iml` if IML lives somewhere other than `/home/ralf/ma
                                     [--min-depth=N] [--max-depth=N] [--lookup-dir=PATH]
 ./serintode mahler     <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]
                                     [--k-min=N] [--k-max=N]
+./serintode kkernel    <input-file> [--k=N] [--max-depth=N] [--max-coeffs=N]
 ./serintode makelookup <max-ode-order> <num-coeffs>     # writes lookuptables/o<n>d<p>.txt
 ```
 
@@ -50,6 +52,8 @@ Input files are plain text, one base-10 integer per line; leading zero coefficie
 - `tests/fibonacci.txt` (negative-control thought experiment; turns out to be a *positive* case — every rational generating function `1/D(x)` satisfies `D(x)f(x) - D(x²)f(x²) = 0`, here `(1-x-x²)f(x) - (1-x²-x⁴)f(x²) = 0`; image size ≈ N — neither k-regular nor k-automatic, just rational).
 
 The Mahler success banner prints `*Image size: m of N terms*`, distinguishing k-automatic (m bounded), k-regular (m grows slowly), and trivial-rational (m ≈ N).
+
+The `kkernel` diagnostic (run separately) gives the dual structural signal: rank stabilises ⇔ k-regular. For the three Mahler fixtures at k=2: Thue-Morse rank 1 (always), Stern rank 2 (until L=1), Fibonacci rank grows (1, 3, 5, 7, …) ⇒ not k-regular.
 
 Output filename: `<input>_<mode>_<NUM_CHECKS>-checks.txt`, in Maple syntax, also echoed to stdout. `make test` diffs against the baselines in `tests/expected/`.
 

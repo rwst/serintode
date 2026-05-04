@@ -11,6 +11,11 @@ long compute_nullspace(long rows, long cols, mpz_t *M, mpz_t **out_N);
 
 void free_nullspace(mpz_t *N, long count);
 
+/* Returns the rank of the integer matrix M (rows x cols, row-major).
+ * Computed as cols - nullity via IML's kernelMP. Destroys M's contents
+ * (caller still owns the mpz_t storage and must mpz_clear). */
+long compute_rank(long rows, long cols, mpz_t *M);
+
 typedef struct {
     long index;
     long max_poly_order;

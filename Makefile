@@ -8,7 +8,7 @@ CPPFLAGS      = -I$(IML_DIR)/include
 LDFLAGS       = -L$(IML_DIR)/lib64
 IML_LDLIBS    = -liml -lcblas -lgmp -lm
 
-OBJS = io.o solver.o modes_linear.o modes_nonlin.o modes_mahler.o modes_makelookup.o
+OBJS = io.o solver.o modes_linear.o modes_nonlin.o modes_mahler.o modes_kkernel.o modes_makelookup.o
 
 .PHONY: all clean test
 all: serintode
@@ -26,6 +26,9 @@ modes_nonlin.o: modes_nonlin.c serintode.h io.h solver.h modes_nonlin.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 modes_mahler.o: modes_mahler.c serintode.h io.h solver.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+modes_kkernel.o: modes_kkernel.c serintode.h io.h solver.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 modes_makelookup.o: modes_makelookup.c serintode.h io.h modes_nonlin.h
@@ -55,6 +58,10 @@ test: serintode
 	@diff -u tests/expected/fibonacci_mahler.txt \
 	         tests/fibonacci.txt_mahler_6-checks.txt \
 	    && echo "PASS: mahler (Fibonacci, trivial rational)"
+	@./serintode kkernel --max-depth=4 tests/thue_morse.txt > tests/thue_morse.txt_kkernel.out
+	@diff -u tests/expected/thue_morse_kkernel.txt \
+	         tests/thue_morse.txt_kkernel.out \
+	    && echo "PASS: kkernel (Thue-Morse, rank stabilises at 1)"
 
 clean:
 	rm -f serintode $(OBJS)

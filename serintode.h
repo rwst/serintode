@@ -10,6 +10,7 @@ typedef struct {
 extern const mode_descriptor mode_linear;
 extern const mode_descriptor mode_nonlin;
 extern const mode_descriptor mode_mahler;
+extern const mode_descriptor mode_kkernel;
 extern const mode_descriptor mode_makelookup;
 
 #endif

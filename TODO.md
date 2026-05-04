@@ -158,12 +158,16 @@ defaults `k_min=2, k_max=10`. `NUM_CHECKS`, `MIN_MAHLER_ORDER`,
       (truncations of `1/(1-x)^t`, `x^a/(1-x^b)` for small a,b,t), or
       solve for the difference of two augmented-system solutions.
 
-- [ ] **k-kernel pre-filter.** Compute the rank of the matrix with rows
-      `[a(k^i n + j)]_n` for `0 <= i <= K_DEPTH`, `0 <= j < k^i`. If the
-      rank keeps growing as `K_DEPTH` does, the sequence is provably not
-      k-regular within the data's resolution — skip the Mahler search
-      for that `k`. IML computes this rank directly. Only worth adding
-      if the Mahler search becomes the bottleneck.
+- [x] **k-kernel rank diagnostic.** Standalone subcommand
+      `serintode kkernel <input> [--k=N] [--max-depth=N]` that prints
+      the rank of the matrix with rows `[a(k^i n + j)]_n` for each
+      depth, so the user can see whether the rank stabilises (k-regular)
+      or keeps growing (not k-regular). Implemented in `modes_kkernel.c`
+      via `compute_rank` (cols − nullity from IML's `kernelMP`).
+- [ ] **Auto pre-filter the Mahler search.** Wire `kkernel` into the
+      `mahler` subcommand so each candidate `k` is rejected up-front if
+      its rank keeps growing within the data's resolution. Only worth
+      adding if the Mahler search becomes the bottleneck.
 
 - [ ] **`K(x)`-coefficient lift.** Clear denominators to extend the
       search to k-Mahler equations with rational-function coefficients.

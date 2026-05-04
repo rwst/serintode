@@ -9,6 +9,19 @@ void free_nullspace(mpz_t *N, long count)
     free(N);
 }
 
+long compute_rank(long rows, long cols, mpz_t *M)
+{
+    mpz_t *N = NULL;
+    long nulldim = kernelMP(rows, cols, M, &N, 1L);
+    if (N != NULL) {
+        long count = (nulldim > 0L) ? cols * nulldim : 0L;
+        for (long i = 0L; i < count; i++) mpz_clear(N[i]);
+        free(N);
+    }
+    if (nulldim < 0L) nulldim = 0L;
+    return cols - nulldim;
+}
+
 long compute_nullspace(long rows, long cols, mpz_t *M, mpz_t **out_N)
 {
     long nulldim = kernelMP(rows, cols, M, out_N, 1L);
