@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `serintode` searches for ODEs that annihilate an integer series (the input is a list of coefficients, one per line). It tries successively larger ODE orders / polynomial-coefficient degrees / nonlinearity depths, building a matrix whose null vectors correspond to candidate ODEs, and computing that nullspace with either IML (mod-p with verification) or FLINT (full bigint, no verification).
 
-A staged refactor (see `plan.md`) is in progress, collapsing the IML programs into a single dispatcher binary `serintode` with subcommands. After Stage 3:
+A staged refactor (see `plan.md`) is in progress, collapsing the IML programs into a single dispatcher binary `serintode` with subcommands. After Stage 4:
 
-- `serintode linear <input>` — linear ODE search via IML. Lives in `modes_linear.c`, sharing `io.{c,h}` (parser, pretty-printer, `s_malloc`) and `solver.{c,h}` (kernel wrapper, null-vector selectors).
-- `serintode_iml_nonlin.c` — algebraic (nonlinear) ODE search via IML, still standalone. Stage 4 collapses it into `serintode nonlin`.
-- `serintode_iml_nonlin_lookup.c` — same, with precomputed term-exponent tables from `lookuptables/o<order>d<depth>.txt`. Stage 4 merges this into `serintode nonlin --lookup-dir=...`.
-- `makelookup.c` — produces those tables; Stage 4 makes it `serintode makelookup`.
+- `serintode linear <input>` — linear ODE search via IML. In `modes_linear.c`.
+- `serintode nonlin <input> [--lookup-dir=PATH]` — algebraic (nonlinear) ODE search via IML. In `modes_nonlin.c`. With `--lookup-dir` set, reads pre-generated term-exponent tables from `<PATH>/o<n>d<p>.txt`; without it, enumerates compositions in-process via `combs()`.
+- `serintode makelookup <max-order> <num-coeffs>` — generates the lookup tables. In `modes_makelookup.c`, sharing `combs()` from `modes_nonlin.h`.
+- Shared code: `io.{c,h}` (parser, pretty-printer, `s_malloc`), `solver.{c,h}` (kernel wrapper, null-vector selectors).
 - `serintode_flint.c` — out of scope (FLINT path).
-- `serintode_iml.c` — orphaned by Stage 3, pending removal.
+- Orphaned, pending removal: `serintode_iml.c`, `serintode_iml_nonlin.c`, `serintode_iml_nonlin_lookup.c`, `makelookup.c`. Stage 5 deletes them.
 
 `old/` contains earlier prototypes — ignore unless asked.
 
@@ -30,19 +30,18 @@ Override `IML_DIR=/path/to/iml` if IML lives somewhere other than `/home/ralf/ma
 ## How to run
 
 ```
-./serintode linear              <input-file>                # via dispatcher
-./serintode_iml_nonlin.o        <input-file>                # standalone, until Stage 4
-./serintode_iml_nonlin_lookup.o <input-file>                # standalone, until Stage 4
-./makelookup                    <MAX_ODE_ORDER> <NUM_COEFFS>
+./serintode linear     <input-file>
+./serintode nonlin     <input-file> [--lookup-dir=PATH]
+./serintode makelookup <MAX_ODE_ORDER> <NUM_COEFFS>     # writes lookuptables/o<n>d<p>.txt
 ```
 
-Tunables (`NUM_CHECKS`, `MIN_ODE_ORDER`, `MAX_COEFFS`, plus `MIN_DEPTH`/`MAX_DEPTH` on the nonlin variants) are still `const` locals at the top of each mode's run function (or main, for the standalone programs) and must be edited in the source, then recompiled. `MAX_LINE_LENGTH` is a `#define` in `io.h`. Stage 5 escalates the per-run knobs to `getopt_long`.
+Tunables (`NUM_CHECKS`, `MIN_ODE_ORDER`, `MAX_COEFFS`, plus `MIN_DEPTH`/`MAX_DEPTH` on nonlin) are still `const` locals at the top of each mode's run function and must be edited in the source, then recompiled. `MAX_LINE_LENGTH` is a `#define` in `io.h`. Stage 5 escalates the per-run knobs to `getopt_long`.
 
 `tests/central_binomials.txt` is a known-good regression input (OEIS A000984; expected ODE `(1-4x)y' - 2y = 0`). Input files are plain text, one base-10 integer per line; leading zero coefficients are stripped automatically.
 
-Output filename: `<finname>_linear_<NUM_CHECKS>-checks.txt` (via `serintode linear`) or `<finname>_nonlinsol_<NUM_CHECKS>-checks.txt` (legacy nonlin program). Both are Maple syntax, also echoed to stdout.
+Output filename: `<finname>_<mode>_<NUM_CHECKS>-checks.txt` in Maple syntax, also echoed to stdout.
 
-`make test` runs `serintode linear` and `serintode_iml_nonlin.o` against `tests/central_binomials.txt`, diffing against `tests/expected/`.
+`make test` runs `./serintode linear` and `./serintode nonlin` against `tests/central_binomials.txt`, diffing against `tests/expected/`.
 
 ## Architecture notes worth knowing before editing
 

@@ -8,5 +8,7 @@ typedef struct {
 } mode_descriptor;
 
 extern const mode_descriptor mode_linear;
+extern const mode_descriptor mode_nonlin;
+extern const mode_descriptor mode_makelookup;
 
 #endif
