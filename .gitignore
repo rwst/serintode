@@ -57,5 +57,4 @@ dkms.conf
 lookuptables/
 oeis/
 serintode_iml_auto_old.c
-tests/
 .directory

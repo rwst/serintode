@@ -1,0 +1,1 @@
+Mahlertests/thue_morse.txt := (-1)*f(x)+(1-x)*f(x^2):

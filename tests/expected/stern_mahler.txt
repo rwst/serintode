@@ -1,0 +1,1 @@
+Mahlertests/stern.txt := (1)*f(x)+(-1-x-x^2)*f(x^2):

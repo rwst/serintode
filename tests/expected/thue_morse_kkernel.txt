@@ -1,0 +1,9 @@
+File tests/thue_morse.txt, k=2, depths 0..4, N=64
+(rank of Q-span of {a(k^i*n + j) : 0<=i<=depth, 0<=j<k^i})
+k-regular  <=>  rank stabilises as depth grows.
+
+  depth=0: rows=1, common-length=64, rank=1
+  depth=1: rows=3, common-length=32, rank=1
+  depth=2: rows=7, common-length=16, rank=1
+  depth=3: rows=15, common-length=8, rank=1
+  depth=4: rows=31, common-length=4, rank=1

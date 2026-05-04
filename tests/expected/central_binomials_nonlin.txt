@@ -1,0 +1,2 @@
+#ODE candidate for tests/central_binomials.txt
+(-2)*y(x)+(1-4*x)*diff(y(x),x):
