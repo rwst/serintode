@@ -44,8 +44,12 @@ Override `IML_DIR=/path/to/iml` if IML lives somewhere other than `/home/ralf/ma
 Defaults match the legacy programs where applicable: linear `--checks=6 --min-order=1 --max-coeffs=400`; nonlin `--checks=0 --min-order=1 --max-coeffs=100 --min-depth=1 --max-depth=10`; mahler `--checks=6 --min-order=1 --max-coeffs=400 --k-min=2 --k-max=10`.
 
 Input files are plain text, one base-10 integer per line; leading zero coefficients are stripped automatically. Regression inputs:
-- `tests/central_binomials.txt` (OEIS A000984; expected linear ODE `(1-4x)y' - 2y = 0`).
-- `tests/thue_morse.txt` (±1 Thue–Morse; expected Mahler-2 equation `f(x) = (1-x)·f(x²)`).
+- `tests/central_binomials.txt` (OEIS A000984; expected linear ODE `(1-4x)y' - 2y = 0`; also exercises nonlin at depth 1).
+- `tests/thue_morse.txt` (±1 Thue–Morse; expected `f(x) = (1-x)·f(x²)`; image size 2 — k-automatic).
+- `tests/stern.txt` (OEIS A002487; expected `f(x) = (1+x+x²)·f(x²)`; image size grows — k-regular, not k-automatic).
+- `tests/fibonacci.txt` (negative-control thought experiment; turns out to be a *positive* case — every rational generating function `1/D(x)` satisfies `D(x)f(x) - D(x²)f(x²) = 0`, here `(1-x-x²)f(x) - (1-x²-x⁴)f(x²) = 0`; image size ≈ N — neither k-regular nor k-automatic, just rational).
+
+The Mahler success banner prints `*Image size: m of N terms*`, distinguishing k-automatic (m bounded), k-regular (m grows slowly), and trivial-rational (m ≈ N).
 
 Output filename: `<input>_<mode>_<NUM_CHECKS>-checks.txt`, in Maple syntax, also echoed to stdout. `make test` diffs against the baselines in `tests/expected/`.
 

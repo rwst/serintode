@@ -46,7 +46,15 @@ test: serintode
 	@./serintode mahler --checks=6 tests/thue_morse.txt > /dev/null
 	@diff -u tests/expected/thue_morse_mahler.txt \
 	         tests/thue_morse.txt_mahler_6-checks.txt \
-	    && echo "PASS: mahler"
+	    && echo "PASS: mahler (Thue-Morse, k-automatic)"
+	@./serintode mahler --checks=6 tests/stern.txt > /dev/null
+	@diff -u tests/expected/stern_mahler.txt \
+	         tests/stern.txt_mahler_6-checks.txt \
+	    && echo "PASS: mahler (Stern, k-regular)"
+	@./serintode mahler --checks=6 tests/fibonacci.txt > /dev/null
+	@diff -u tests/expected/fibonacci_mahler.txt \
+	         tests/fibonacci.txt_mahler_6-checks.txt \
+	    && echo "PASS: mahler (Fibonacci, trivial rational)"
 
 clean:
 	rm -f serintode $(OBJS)

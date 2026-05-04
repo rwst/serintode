@@ -29,6 +29,19 @@ static void print_monomial_mahler(FILE *eqs, FILE *out, long i, const void *raw_
     }
 }
 
+static long compute_image_size(mpz_t *S, long N)
+{
+    long unique = 0L;
+    for (long i = 0L; i < N; i++) {
+        int is_new = 1;
+        for (long j = 0L; j < i; j++) {
+            if (mpz_cmp(S[i], S[j]) == 0) { is_new = 0; break; }
+        }
+        if (is_new) unique++;
+    }
+    return unique;
+}
+
 static const char mahler_usage[] =
     "Usage: serintode mahler <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]\n"
     "                                     [--k-min=N] [--k-max=N]\n";
@@ -149,6 +162,7 @@ static int mahler_run(int argc, char *argv[])
     }
     (void) max_mahler_bound_for_k;
 
+    long image_size = compute_image_size(S, NUM_COEFFS);
     free_series(S, NUM_COEFFS);
     free(M);
 
@@ -158,6 +172,7 @@ static int mahler_run(int argc, char *argv[])
         printf("*Confidence level: %02ld%%*\n",
                (long) floor(100.0 - 100.0 * (mahler_order + 1L) * (picked.max_poly_order + 1L)
                             / (double)(NUM_COEFFS - mahler_order)));
+        printf("*Image size: %ld of %ld terms*\n", image_size, NUM_COEFFS);
         printf("***********************\n\n");
 
         char fouteqsname[4096];
