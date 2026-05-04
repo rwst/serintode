@@ -14,8 +14,14 @@ PROGS = serintode_iml.o serintode_iml_nonlin.o serintode_iml_nonlin_lookup.o mak
 .PHONY: all clean test
 all: $(PROGS)
 
-serintode_iml.o: serintode_iml.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $< -o $@ $(LDFLAGS) $(IML_LDLIBS)
+io.o: io.c io.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+solver.o: solver.c solver.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+serintode_iml.o: serintode_iml.c io.o solver.o io.h solver.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) serintode_iml.c io.o solver.o -o $@ $(LDFLAGS) $(IML_LDLIBS)
 
 serintode_iml_nonlin.o: serintode_iml_nonlin.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $< -o $@ $(LDFLAGS) $(IML_LDLIBS)
@@ -37,4 +43,4 @@ test: serintode_iml.o serintode_iml_nonlin.o
 	    && echo "PASS: nonlin"
 
 clean:
-	rm -f $(PROGS)
+	rm -f $(PROGS) io.o solver.o
