@@ -1,13 +1,16 @@
 INTRODUCTION
 serintode is a C program for searching for ODEs which annihilate an integer series up to a certain order.
 
-It ships as a single dispatcher binary `serintode` with three subcommands:
+It ships as a single dispatcher binary `serintode` with five subcommands:
   serintode linear     <input> [--checks=N] [--min-order=N] [--max-coeffs=N]
   serintode nonlin     <input> [--checks=N] [--min-order=N] [--max-coeffs=N]
                                [--min-depth=N] [--max-depth=N] [--lookup-dir=PATH]
+  serintode mahler     <input> [--checks=N] [--min-order=N] [--max-coeffs=N]
+                               [--k-min=N] [--k-max=N]
+  serintode kkernel    <input> [--k=N] [--max-depth=N] [--max-coeffs=N]
   serintode makelookup <max-ode-order> <num-coeffs>
 
-`linear` searches for linear ODEs. `nonlin` searches for algebraic (nonlinear) ODEs up to the given depth. `makelookup` precomputes the term-exponent tables that `nonlin --lookup-dir=lookuptables` reads (a speed optimisation; without the flag, the tables are enumerated in-process).
+`linear` searches for linear ODEs. `nonlin` searches for algebraic (nonlinear) ODEs up to the given depth. `mahler` searches for Mahler functional equations `sum_i p_i(x) f(x^(k^i)) = 0`, the structural detector for k-regular sequences (Allouche-Shallit). `kkernel` is a diagnostic: it computes the rank of the Q-span of the k-kernel `{(a_{k^i n + j})_n}` per depth — the rank stabilises iff the sequence is k-regular. `makelookup` precomputes the term-exponent tables that `nonlin --lookup-dir=lookuptables` reads (a speed optimisation; without the flag, the tables are enumerated in-process).
 
 A separate FLINT-based prototype `serintode_flint.c` exists but is out of scope of the current refactor; it has no internal verification and can give spurious results.
 

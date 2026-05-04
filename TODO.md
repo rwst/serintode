@@ -24,9 +24,10 @@ data file — they are robustness, correctness, and quality items.
       each line. Errors out with the offending line number; previously a
       malformed line silently became a zero coefficient.
 
-- [ ] Check `fscanf` return value when reading lookup tables; a truncated file
-      leaves `orderexp[i][j]` undefined.
-  - `serintode_iml_nonlin_lookup.c:320`
+- [x] Check `fscanf` return value when reading lookup tables; a truncated file
+      previously left `orderexp[i][j]` undefined. Now errors out at the
+      offending `(i, j)` with the lookup file path. See `modes_nonlin.c:84`
+      (in `load_orderexp_from_lookup`).
 
 - [ ] Detect lines longer than `MAX_LINE_LENGTH-1` (no newline read by
       `fgets`) and either error out or join the continuation. Currently such a
@@ -34,8 +35,8 @@ data file — they are robustness, correctness, and quality items.
       coefficients with ≥99999 digits.
 
 - [x] Moved `input_string` from a `MAX_LINE_LENGTH+1` stack array to a
-      `malloc`'d buffer (free'd right after `fclose(fin)`) in the three IML
-      programs. (FLINT version out of scope.)
+      heap buffer (free'd right after `fclose(fin)`). Now lives once in
+      `read_series` (`io.c`). FLINT version out of scope.
 
 ## Latent buffer overflows (not reachable from input data)
 
@@ -50,15 +51,16 @@ data file — they are robustness, correctness, and quality items.
 - [x] `(dcheck==-1)&(errno!=EEXIST)` → `&&` at `makelookup.c:72,81`.
 - [ ] `mkdir(dirname, S_IRWXU|S_IRWXG|S_IRWXO)` creates the lookup dir as
       0777. Tighten to 0755 (or 0700) unless world-writable is intentional.
-  - `makelookup.c:71`
+  - `modes_makelookup.c:33`
 
 ## Ergonomics
 
-- [x] Take `finname` from `argv[1]` rather than recompiling. Done in all
-      three IML programs; bare invocation now prints
-      `Usage: <prog> <input-file>` and exits non-zero. Other tunables
-      (`NUM_CHECKS`, `MIN_ODE_ORDER`, `MAX_COEFFS`, depth bounds) still
-      require recompiling — escalate to `getopt` if that becomes painful.
+- [x] Take `finname` from positional `argv[1]` and per-run knobs
+      (`--checks`, `--min-order`, `--max-coeffs`, `--min-depth`,
+      `--max-depth`, `--lookup-dir`, `--k-min`, `--k-max`, `--k`,
+      `--max-depth`) from `getopt_long`. Bare invocation prints a
+      mode-specific usage line. `MAX_LINE_LENGTH` is the only structural
+      limit that still needs a recompile (`#define` in `io.h`).
 
 ## Maintainability
 
@@ -69,85 +71,34 @@ data file — they are robustness, correctness, and quality items.
       and `solver.{c,h}` (kernel wrapper, null-vector selectors). Per-run
       knobs are `getopt_long` flags. See `plan.md` for the design notes.
 
-## New module: `serintode_iml_mahler.c` (Mahler / k-regular search)
+## Mahler / k-regular search — implemented, follow-ups remain
 
-Port the matrix-nullspace template from `serintode_iml.c` to the Mahler
-operator `M_k : f(x) -> f(x^k)`, the structural detector for k-regular
-sequences (Allouche-Shallit). Captures k-automatic sequences when the
-additional finite-image constraint holds. Out of reach of the existing
-linear / nonlin programs: automatic sequences are not D-finite over `Q`
-unless eventually periodic (Adamczewski-Bell), so `serintode_iml.c`
-returns nothing on Thue-Morse, Stern, regular paperfolding, etc.
+Implemented as `modes_mahler.c` (the `serintode mahler` subcommand) and
+`modes_kkernel.c` (the `serintode kkernel` diagnostic). Captures
+k-regular sequences (Allouche-Shallit) and, with the extra finite-image
+condition reported by the `*Image size: m of N terms*` banner line,
+k-automatic sequences. Out of reach of the linear / nonlin programs:
+automatic sequences are not D-finite over `Q` unless eventually periodic
+(Adamczewski-Bell).
 
-A pure-Python prototype with a working Thue-Morse demo lives at
-`mahler_guess.py` in this repo; caveats for that sketch are in
-`TODO_mahler.md`.
+The pure-Python prototype `mahler_guess.py` and its caveats in
+`TODO_mahler.md` were the original sketch.
 
-### Matrix construction
+### Math (background, still useful as documentation)
 
 Given `a_0, ..., a_{N-1}`, look for `p_0, ..., p_d in Z[x]` of degree
 `<= D`, not all zero, with
 
     sum_{i=0}^{d} p_i(x) f(x^(k^i)) = 0,    f(x) = sum a_n x^n.
 
-Unknowns `c_{i,j}` for `0 <= i <= d`, `0 <= j <= D` — `(d+1)(D+1)` total.
-Row `N` (coefficient of `x^N` in the LHS) gives one equation:
-
-    sum_{i,j} c_{i,j} * [k^i | (N-j)] * a_{(N-j)/k^i} = 0.
-
-So `M[N][(i,j)] = a_{(N-j)/k^i}` when `k^i | (N-j)` and the index is in
-range, else 0. Pure integer arithmetic — feeds straight into `kernelMP`
-/ `nullspaceMP`. No derivatives, no `combs()`; simpler than either
-existing IML program.
-
-### Search loop
-
-Outer loop over base `k`. By Cobham, a sequence can be k-automatic for
-at most one multiplicative class, so just take the first hit:
-
-```c
-for (long k = K_MIN; k <= K_MAX; k++)
-    for (long n = MIN_MAHLER_ORDER; n <= MAX_MAHLER_ORDER; n++)
-        for (long deg = 0; deg <= MAX_POLY_ORDER(n); deg++)
-            // build M, nullspace, pick best null vector by
-            // (max poly degree, then nnz) as in serintode_iml.c
-```
-
-Bound formulas, parallel to README's derivations for the linear case:
+Row `N` of the matrix has entry `M[N][(i,j)] = a_{(N-j)/k^i}` when
+`k^i | (N-j)` and the index is in range, else 0. Bound formulas:
 
     MAX_POLY_ORDER(n)  = floor((NUM_COEFFS - NUM_CHECKS) / (n+1)) - 1
     MAX_MAHLER_ORDER   = floor(log_k(NUM_COEFFS - NUM_CHECKS))
 
 The IML precision constraint
-`ceil(rows/2)*(p-1)^2 + (p-1) <= 2^53 - 1` carries over unchanged — IML
-doesn't care that the matrix came from a Mahler operator.
-
-### Output
-
-Maple syntax, joining `(<poly>)*f(x^(k^i))` with ` + `. Example for
-Thue-Morse:
-
-    (1)*f(x) + (-1+x)*f(x^2) = 0
-
-Filename suffix `_mahlersol_<NUM_CHECKS>-checks.txt`, alongside stdout
-print, matching the existing programs.
-
-### Verification
-
-- `nullspaceMP` already checks the null vector against the matrix —
-  reuse, same as the linear program.
-- Plus `NUM_CHECKS` over-determination: build with
-  `NUM_COEFFS - NUM_CHECKS` rows, evaluate the recovered relation
-  against the held-out tail, reject on mismatch. Same pattern as
-  `serintode_iml.c`.
-
-### CLI
-
-    ./serintode_iml_mahler.o <input-file> [k_min] [k_max]
-
-defaults `k_min=2, k_max=10`. `NUM_CHECKS`, `MIN_MAHLER_ORDER`,
-`MAX_COEFFS` stay `const` locals at the top of `main()` until the
-`getopt` escalation under Ergonomics happens.
+`ceil(rows/2)*(p-1)^2 + (p-1) <= 2^53 - 1` carries over unchanged.
 
 ### Follow-ups
 
@@ -164,6 +115,7 @@ defaults `k_min=2, k_max=10`. `NUM_CHECKS`, `MIN_MAHLER_ORDER`,
       depth, so the user can see whether the rank stabilises (k-regular)
       or keeps growing (not k-regular). Implemented in `modes_kkernel.c`
       via `compute_rank` (cols − nullity from IML's `kernelMP`).
+
 - [ ] **Auto pre-filter the Mahler search.** Wire `kkernel` into the
       `mahler` subcommand so each candidate `k` is rejected up-front if
       its rank keeps growing within the data's resolution. Only worth
@@ -174,18 +126,13 @@ defaults `k_min=2, k_max=10`. `NUM_CHECKS`, `MIN_MAHLER_ORDER`,
       Degree blows up; only do this if the integer-coefficient sweep
       finds nothing.
 
-- [ ] **Cross-check vs. `mahler_guess.py`.** Once the C version works,
-      diff its hits against the Python prototype on a shared OEIS slice
-      to catch implementation bugs in either.
-
-### Where to copy from
-
-`serintode_iml.c` is the right template — same shape (linear, no
-`combs()`), same null-vector selection rule, same I/O. Expect comparable
-LOC. The Maintainability note above applies: this would be the fourth
-program with its own copy of the file parser and output writer; weigh
-against the long-standing plan to factor those out before adding a
-fourth offender.
+- [ ] **Cross-check vs. `mahler_guess.py`.** Diff C hits against the
+      Python prototype on a shared OEIS slice to catch implementation
+      bugs in either. Note: TODO_mahler.md's claim that Stern's k=2
+      kernel rank is 5 disagrees with both the C `kkernel` (rank 2) and
+      direct hand-calculation; one of TODO_mahler / Allouche-Shallit /
+      our implementation is wrong, worth resolving as part of the
+      cross-check.
 
 ## Out of scope of this audit
 
