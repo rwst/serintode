@@ -62,6 +62,7 @@ int main()
     
     NUM_COEFFS=0L;
     nonzeroterms=0L;
+    long line_no=0L;
     while (NUM_COEFFS<MAX_COEFFS)
     {
         fgcheck = fgets(input_string,MAX_LINE_LENGTH,fin);
@@ -78,12 +79,17 @@ int main()
                 fclose(fin);
                 exit(EXIT_FAILURE);
             }
-        }   
+        }
         else
         {
+            line_no++;
             if (nonzeroterms==0L) //Remove initial zeros
             {
-                mpz_set_str(temp,input_string,10);
+                if (mpz_set_str(temp,input_string,10)!=0)
+                {
+                    printf("Error: malformed integer at line %ld of %s.\n",line_no,finname);
+                    exit(EXIT_FAILURE);
+                }
                 if (mpz_cmp_ui(temp,0)!=0)
                 {
                     nonzeroterms++;
@@ -93,7 +99,11 @@ int main()
             }
             else
             {
-                mpz_init_set_str(S[NUM_COEFFS],input_string,10);
+                if (mpz_init_set_str(S[NUM_COEFFS],input_string,10)!=0)
+                {
+                    printf("Error: malformed integer at line %ld of %s.\n",line_no,finname);
+                    exit(EXIT_FAILURE);
+                }
                 NUM_COEFFS++;
             }
         }
@@ -351,7 +361,7 @@ int main()
         printf("*Confidence level: %02ld%%*\n",(long) floor((double) 100L-100L*(ODE_ORDER+1L)*(MIN_MAX_FOUND_POLY_ORDER+1L)/(NUM_COEFFS-ODE_ORDER)));
         printf("***********************\n\n");
         
-        sprintf(fouteqsname,"%s_solution_%ld-checks.txt",finname,NUM_CHECKS);
+        snprintf(fouteqsname,sizeof(fouteqsname),"%s_solution_%ld-checks.txt",finname,NUM_CHECKS);
         fouteqs = fopen(fouteqsname,"w");
         if (fouteqs==NULL)
         {

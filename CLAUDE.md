@@ -18,17 +18,18 @@ There are four independent main programs, each a single `.c` file with `int main
 
 ## Build
 
-There is no build system; compile each program directly with gcc. Commands from the README:
+There is no build system; compile each program directly with gcc. On this
+machine IML lives under `/home/ralf/math/iml`, so the IML programs need
+`-I` / `-L` overrides — the README's plain `-liml` won't find it:
 
 ```
-gcc -Wall serintode_iml.c              -o serintode_iml.o              -liml -lcblas -lgmp -lm
-gcc -Wall serintode_iml_nonlin.c       -o serintode_iml_nonlin.o       -liml -lcblas -lgmp -lm
-gcc -Wall serintode_iml_nonlin_lookup.c -o serintode_iml_nonlin_lookup.o -liml -lcblas -lgmp -lm
-gcc -Wall serintode_flint.c            -o serintode_flint.o            -lflint -lgmp -lm -I /usr/local/include/flint
+gcc -Wall serintode_iml.c              -o serintode_iml.o              -I /home/ralf/math/iml/include -L /home/ralf/math/iml/lib64 -liml -lcblas -lgmp -lm
+gcc -Wall serintode_iml_nonlin.c       -o serintode_iml_nonlin.o       -I /home/ralf/math/iml/include -L /home/ralf/math/iml/lib64 -liml -lcblas -lgmp -lm
+gcc -Wall serintode_iml_nonlin_lookup.c -o serintode_iml_nonlin_lookup.o -I /home/ralf/math/iml/include -L /home/ralf/math/iml/lib64 -liml -lcblas -lgmp -lm
 gcc -Wall makelookup.c                 -o makelookup                   -lgmp -lm
 ```
 
-The `.o` extension is misleading — these are full executables. Library install instructions (IML, FLINT, GMP, MPFR, ATLAS) are in `README.txt`.
+The `.o` extension is misleading — these are full executables. Library install instructions (IML, GMP, ATLAS) are in `README.txt`.
 
 ## How to run
 

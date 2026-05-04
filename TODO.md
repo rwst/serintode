@@ -14,13 +14,20 @@ data file — they are robustness, correctness, and quality items.
 
 ## Robustness
 
-- [ ] Check return value of `mpz_init_set_str` / `mpz_set_str` (and
-      `fmpz_set_str` in the flint version) when parsing each line. Currently a
-      malformed line silently becomes a zero coefficient.
-  - `serintode_iml.c:86`, `serintode_iml.c:96`
-  - `serintode_flint.c:79`
-  - `serintode_iml_nonlin.c:120`, `serintode_iml_nonlin.c:130`
-  - `serintode_iml_nonlin_lookup.c` (matching lines)
+- [ ] Double-free / use-after-close in the "couldn't open output equations
+      file" error path: each file calls `fclose(fin)` and `free(M)` again
+      after the main success-path already closed/freed them. `gcc -Wall`
+      flags this with `-Wuse-after-free`. Fix by removing the redundant
+      cleanup in the error branch (or by tracking pointers as NULL after the
+      first close/free).
+  - `serintode_iml.c:359` (vs first `fclose` at `:101`),
+    `serintode_iml.c:366` (vs first `free(M)` at `:323`)
+  - `serintode_iml_nonlin.c:700` (vs `:135`)
+  - `serintode_iml_nonlin_lookup.c:686` (vs `:111`)
+
+- [x] Check return value of `mpz_init_set_str` / `mpz_set_str` when parsing
+      each line. Errors out with the offending line number; previously a
+      malformed line silently became a zero coefficient.
 
 - [ ] Check `fscanf` return value when reading lookup tables; a truncated file
       leaves `orderexp[i][j]` undefined.
@@ -39,22 +46,15 @@ data file — they are robustness, correctness, and quality items.
 
 ## Latent buffer overflows (not reachable from input data)
 
-- [ ] Replace `sprintf` into the 64-byte `fouteqsname` / `fname` stack buffers
-      with `snprintf`. Triggers only if `finname` is edited to a long string
-      in the source, but the fix is one-line per call site.
-  - `serintode_iml.c:354`
-  - `serintode_flint.c:318`
-  - `serintode_iml_nonlin.c:695`
-  - `serintode_iml_nonlin_lookup.c:308`, `serintode_iml_nonlin_lookup.c:681`
-  - `makelookup.c:145`
+- [x] Replace `sprintf` into the 64-byte `fouteqsname` / `fname` stack buffers
+      with `snprintf` in the in-scope IML files and `makelookup.c`. (The
+      `serintode_flint.c` site is out of scope — see project memory.)
 
 ## `makelookup.c`
 
-- [ ] Validate `atol(argv[1])` / `atol(argv[2])` — reject ≤0 and absurdly
-      large values before allocating.
-- [ ] `(dcheck==-1)&(errno!=EEXIST)` uses bitwise `&`; should be `&&`. Works
-      by coincidence today.
-  - `makelookup.c:72`, `makelookup.c:81`
+- [x] Validate `atol(argv[1])` / `atol(argv[2])` — rejects ≤0 with a clear
+      error.
+- [x] `(dcheck==-1)&(errno!=EEXIST)` → `&&` at `makelookup.c:72,81`.
 - [ ] `mkdir(dirname, S_IRWXU|S_IRWXG|S_IRWXO)` creates the lookup dir as
       0777. Tighten to 0755 (or 0700) unless world-writable is intentional.
   - `makelookup.c:71`

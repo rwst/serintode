@@ -70,6 +70,7 @@ int main()
     
     NUM_COEFFS=0L;
     nonzeroterms=0L;
+    long line_no=0L;
     while (NUM_COEFFS<MAX_COEFFS)
     {
         fgcheck = fgets(input_string,MAX_LINE_LENGTH,fin);
@@ -88,12 +89,17 @@ int main()
                 fclose(fin);
                 exit(EXIT_FAILURE);
             }
-        }   
+        }
         else
         {
+            line_no++;
             if (nonzeroterms==0L) //Remove initial zeros
             {
-                mpz_set_str(temp,input_string,10);
+                if (mpz_set_str(temp,input_string,10)!=0)
+                {
+                    printf("Error: malformed integer at line %ld of %s.\n",line_no,finname);
+                    exit(EXIT_FAILURE);
+                }
                 if (mpz_cmp_ui(temp,0)!=0)
                 {
                     nonzeroterms++;
@@ -103,12 +109,16 @@ int main()
             }
             else
             {
-                mpz_init_set_str(I[NUM_COEFFS],input_string,10);
+                if (mpz_init_set_str(I[NUM_COEFFS],input_string,10)!=0)
+                {
+                    printf("Error: malformed integer at line %ld of %s.\n",line_no,finname);
+                    exit(EXIT_FAILURE);
+                }
                 NUM_COEFFS++;
             }
         }
     }
-    fclose(fin); 
+    fclose(fin);
     printf("\nChecking %s:\n",finname);
     
     MAX_ODE_ORDER=NUM_COEFFS-NUM_CHECKS-1L;     
@@ -305,7 +315,7 @@ int main()
                 }
             }
             
-            sprintf(fname,"lookuptables/o%ldd%ld.txt",ODE_ORDER,p);
+            snprintf(fname,sizeof(fname),"lookuptables/o%ldd%ld.txt",ODE_ORDER,p);
             flook=fopen(fname,"r");
             if (flook==NULL)
             {
@@ -678,7 +688,7 @@ int main()
         printf("null dimension = %ld\n",nulldim);
         printf("****Found a solution!****\n");
         
-        sprintf(fouteqsname,"%s_nonlinsol_%ld-checks.txt",finname,NUM_CHECKS);
+        snprintf(fouteqsname,sizeof(fouteqsname),"%s_nonlinsol_%ld-checks.txt",finname,NUM_CHECKS);
         fouteqs = fopen(fouteqsname,"w");
         if (fouteqs==NULL)
         {

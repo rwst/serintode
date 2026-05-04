@@ -62,6 +62,11 @@ int main(int argc, char* argv[])
     }
     MAX_ODE_ORDER = atol(argv[1]);
     NUM_COEFFS = atol(argv[2]);
+    if (MAX_ODE_ORDER<=0L || NUM_COEFFS<=0L)
+    {
+        printf("\nError: both arguments must be positive integers. Got MAX_ODE_ORDER=%ld, NUM_COEFFS=%ld.\n",MAX_ODE_ORDER,NUM_COEFFS);
+        exit(EXIT_FAILURE);
+    }
     maxnumterms = NUM_COEFFS;
     
    
@@ -69,7 +74,7 @@ int main(int argc, char* argv[])
     if (OS) //UNIX
     {
         dcheck = mkdir(dirname,S_IRWXU | S_IRWXG | S_IRWXO);
-        if ((dcheck==-1)&(errno!=EEXIST))
+        if ((dcheck==-1) && (errno!=EEXIST))
         {
             printf("\nERROR: Could not create output directory. %s\n",strerror(errno));
             exit(EXIT_FAILURE);
@@ -78,7 +83,7 @@ int main(int argc, char* argv[])
     else if (OS==0) //Windows
     {
         dcheck = _mkdir(dirname);
-        if ((dcheck==-1)&(errno!=EEXIST))
+        if ((dcheck==-1) && (errno!=EEXIST))
         {
             printf("\nERROR: Could not create output directory. %s\n",strerror(errno));
             exit(EXIT_FAILURE);
@@ -142,7 +147,7 @@ int main(int argc, char* argv[])
             
             combs(orderexp,s,ODE_ORDER+1L,p,0,&arrindex);
             
-            sprintf(fname,"%s/o%ldd%ld.txt",dirname,n,p);
+            snprintf(fname,sizeof(fname),"%s/o%ldd%ld.txt",dirname,n,p);
             fout = fopen(fname,"w");
             if (fout==NULL)
             {
