@@ -32,11 +32,11 @@ serintode: serintode.c serintode.h $(OBJS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) serintode.c $(OBJS) -o $@ $(LDFLAGS) $(IML_LDLIBS)
 
 test: serintode
-	@./serintode linear tests/central_binomials.txt > /dev/null
+	@./serintode linear --checks=6 tests/central_binomials.txt > /dev/null
 	@diff -u tests/expected/central_binomials_linear.txt \
 	         tests/central_binomials.txt_linear_6-checks.txt \
 	    && echo "PASS: linear"
-	@./serintode nonlin tests/central_binomials.txt > /dev/null
+	@./serintode nonlin --checks=0 tests/central_binomials.txt > /dev/null
 	@diff -u tests/expected/central_binomials_nonlin.txt \
 	         tests/central_binomials.txt_nonlin_0-checks.txt \
 	    && echo "PASS: nonlin"

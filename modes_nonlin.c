@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <getopt.h>
 #include "gmp.h"
 
 #include "serintode.h"
@@ -92,37 +93,53 @@ static int load_orderexp_from_lookup(const char *lookup_dir,
     return 0;
 }
 
+static const char nonlin_usage[] =
+    "Usage: serintode nonlin <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]\n"
+    "                                     [--min-depth=N] [--max-depth=N] [--lookup-dir=PATH]\n";
+
 static int nonlin_run(int argc, char *argv[])
 {
-    long const NUM_CHECKS = 0L;
-    long const MIN_ODE_ORDER = 1L;
-    long const MIN_DEPTH = 1L;
-    long const MAX_DEPTH = 10L;
-    long const MAX_COEFFS = 100L;
+    long NUM_CHECKS = 0L;
+    long MIN_ODE_ORDER = 1L;
+    long MIN_DEPTH = 1L;
+    long MAX_DEPTH = 10L;
+    long MAX_COEFFS = 100L;
+    const char *lookup_dir = NULL;
+
+    static const struct option long_opts[] = {
+        {"checks",     required_argument, 0, 'c'},
+        {"min-order",  required_argument, 0, 'm'},
+        {"max-coeffs", required_argument, 0, 'M'},
+        {"min-depth",  required_argument, 0, 'd'},
+        {"max-depth",  required_argument, 0, 'D'},
+        {"lookup-dir", required_argument, 0, 'L'},
+        {"help",       no_argument,       0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    optind = 1;
+    int c;
+    while ((c = getopt_long(argc, argv, "", long_opts, NULL)) != -1) {
+        switch (c) {
+            case 'c': NUM_CHECKS = atol(optarg); break;
+            case 'm': MIN_ODE_ORDER = atol(optarg); break;
+            case 'M': MAX_COEFFS = atol(optarg); break;
+            case 'd': MIN_DEPTH = atol(optarg); break;
+            case 'D': MAX_DEPTH = atol(optarg); break;
+            case 'L': lookup_dir = optarg; break;
+            case 'h': fputs(nonlin_usage, stdout); return EXIT_SUCCESS;
+            case '?': return EXIT_FAILURE;
+        }
+    }
+    if (optind != argc - 1) {
+        fputs(nonlin_usage, stderr);
+        return EXIT_FAILURE;
+    }
+    const char *finname = argv[optind];
 
     setvbuf(stdout, NULL, _IONBF, 0);
     time_t start, end;
     time(&start);
-
-    const char *finname = NULL;
-    const char *lookup_dir = NULL;
-    for (int ai = 1; ai < argc; ai++) {
-        if (strncmp(argv[ai], "--lookup-dir=", 13) == 0) {
-            lookup_dir = argv[ai] + 13;
-        } else if (argv[ai][0] == '-' && argv[ai][1] == '-') {
-            fprintf(stderr, "unknown flag: %s\n", argv[ai]);
-            return EXIT_FAILURE;
-        } else if (finname == NULL) {
-            finname = argv[ai];
-        } else {
-            fprintf(stderr, "unexpected positional arg: %s\n", argv[ai]);
-            return EXIT_FAILURE;
-        }
-    }
-    if (finname == NULL) {
-        fprintf(stderr, "Usage: serintode nonlin <input-file> [--lookup-dir=PATH]\n");
-        return EXIT_FAILURE;
-    }
 
     mpz_t *I = NULL;
     long NUM_COEFFS = read_series(finname, MAX_COEFFS, &I);

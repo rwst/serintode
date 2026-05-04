@@ -62,11 +62,12 @@ data file — they are robustness, correctness, and quality items.
 
 ## Maintainability
 
-- [ ] The four `serintode_*` programs each carry their own copy of the input
-      reader, the output writer, and the main null-space loop (~500–900 LOC
-      each). Every fix in this file has to be applied 3–4 times. Factor the
-      shared pieces (file parsing, ODE pretty-printing, IML/FLINT wrappers)
-      into a small library or a single program with a backend switch.
+- [x] The four `serintode_*` programs each carry their own copy of the input
+      reader, the output writer, and the main null-space loop. Refactored
+      into a single dispatcher binary `serintode` with subcommands `linear`,
+      `nonlin`, `makelookup`, sharing `io.{c,h}` (parser, pretty-printer)
+      and `solver.{c,h}` (kernel wrapper, null-vector selectors). Per-run
+      knobs are `getopt_long` flags. See `plan.md` for the design notes.
 
 ## New module: `serintode_iml_mahler.c` (Mahler / k-regular search)
 

@@ -1,17 +1,23 @@
 INTRODUCTION
 serintode is a C program for searching for ODEs which annihilate an integer series up to a certain order.
 
-There are two programs based on two different libraries, IML and flint. The IML version has linear and algebraic ODE search versions. At the moment the flint version only has a linear ODE version. 
+It ships as a single dispatcher binary `serintode` with three subcommands:
+  serintode linear     <input> [--checks=N] [--min-order=N] [--max-coeffs=N]
+  serintode nonlin     <input> [--checks=N] [--min-order=N] [--max-coeffs=N]
+                               [--min-depth=N] [--max-depth=N] [--lookup-dir=PATH]
+  serintode makelookup <max-ode-order> <num-coeffs>
 
-The program automatically determines the number of coefficients in a file and searches for ODEs of increasing order and depth according to the number of coefficients and the number of checks required. It outputs the result both to the screen as well as a file created if a solution is found, using the input file name as the start of the file.
+`linear` searches for linear ODEs. `nonlin` searches for algebraic (nonlinear) ODEs up to the given depth. `makelookup` precomputes the term-exponent tables that `nonlin --lookup-dir=lookuptables` reads (a speed optimisation; without the flag, the tables are enumerated in-process).
 
-Input files should have one coefficient per line.
+A separate FLINT-based prototype `serintode_flint.c` exists but is out of scope of the current refactor; it has no internal verification and can give spurious results.
 
-In the current version the C files should be modified for changing the input file name, the number of checks, the minimum ODE order, and the minimum depth.
+The program automatically determines the number of coefficients in the input file and searches for ODEs of increasing order, polynomial-coefficient degree, and (for nonlin) nonlinearity depth, according to the number of coefficients and the number of checks required. It outputs the result both to stdout and to a file `<input>_<mode>_<NUM_CHECKS>-checks.txt` if a solution is found.
 
-If there are more than 10,000 coefficients, MAX_COEFFS should be changed accordingly.
+Input files should have one base-10 integer coefficient per line. Leading zero coefficients are stripped automatically.
 
-If the coefficients are larger than 100,000 digits, the MAX_LINE_LENGTH should be changed accordingly.
+If there are more than 10,000 coefficients, raise `--max-coeffs` accordingly.
+
+If the coefficients are larger than 100,000 digits, raise `MAX_LINE_LENGTH` (a #define in `io.h`) and recompile.
 
 The program looks for polynomial coefficients all of the same degree, the degree being determined by the formula:
 MAX_POLY_ORDER=floor((NUM_COEFFS-NUM_CHECKS-ODE_ORDER)/(ODE_ORDER+1L))-1;
@@ -19,7 +25,7 @@ The maximum ODE order is found from the formula:
 MAX_ODE_ORDER=floor((NUM_COEFFS-NUM_CHECKS)/2)-1;
 since an ODE with only constant coefficients is not considered a solution, the degree of each polynomial coefficient should be at least 1. 
 
-The algebraic ODE version serintode_iml_nonlin.c searches for algebraic ODEs up to an order determined by the number of coefficients and up to n-products with the "depth" n determined also by the number of coefficients. An order 2 depth 3 ODE would have terms:
+The `nonlin` mode searches for algebraic ODEs up to an order determined by the number of coefficients and up to n-products with the "depth" n determined also by the number of coefficients. An order 2 depth 3 ODE would have terms:
 p1*y + p2*Dx + p3*Dx^2 + p4*y^3 + p5*y^2*Dx + p6*y^2*Dx^2 + p7*y*(Dx)^2 + p8*y*Dx*Dx^2 + p9*y*(Dx^2)^2 + p10*(Dx)^3 + p11*(Dx)^2*Dx^2 + p12*Dx*(Dx^2)^2 + p13*(Dx^2)^3
 where p_k are polynomial coefficients.
 
@@ -87,9 +93,9 @@ https://cs.uwaterloo.ca/~astorjoh/jscdense.pdf
 
 The IML version is faster than the flint version.
 
-Compilation can be done via:
-gcc -Wall serintode_iml.c -o serintode_iml.o -liml -lcblas -lgmp -lm
-gcc -Wall serintode_iml_nonlin.c -o serintode_iml_nonlin.o -liml -lcblas -lgmp -lm
+Compilation:
+make
+(override IML_DIR=/path/to/iml if IML lives somewhere other than /home/ralf/math/iml)
 
 
 VERSION THAT RELIES ON FLINT

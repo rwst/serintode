@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <getopt.h>
 #include "gmp.h"
 
 #include "serintode.h"
@@ -25,21 +26,43 @@ static void print_monomial_linear(FILE *eqs, FILE *out, long i, const void *ctx)
     }
 }
 
+static const char linear_usage[] =
+    "Usage: serintode linear <input-file> [--checks=N] [--min-order=N] [--max-coeffs=N]\n";
+
 static int linear_run(int argc, char *argv[])
 {
-    long const NUM_CHECKS = 6L;
-    long const MIN_ODE_ORDER = 1L;
-    long const MAX_COEFFS = 400L;
+    long NUM_CHECKS = 6L;
+    long MIN_ODE_ORDER = 1L;
+    long MAX_COEFFS = 400L;
+
+    static const struct option long_opts[] = {
+        {"checks",     required_argument, 0, 'c'},
+        {"min-order",  required_argument, 0, 'm'},
+        {"max-coeffs", required_argument, 0, 'M'},
+        {"help",       no_argument,       0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    optind = 1;
+    int c;
+    while ((c = getopt_long(argc, argv, "", long_opts, NULL)) != -1) {
+        switch (c) {
+            case 'c': NUM_CHECKS = atol(optarg); break;
+            case 'm': MIN_ODE_ORDER = atol(optarg); break;
+            case 'M': MAX_COEFFS = atol(optarg); break;
+            case 'h': fputs(linear_usage, stdout); return EXIT_SUCCESS;
+            case '?': return EXIT_FAILURE;
+        }
+    }
+    if (optind != argc - 1) {
+        fputs(linear_usage, stderr);
+        return EXIT_FAILURE;
+    }
+    const char *finname = argv[optind];
 
     setvbuf(stdout, NULL, _IONBF, 0);
     time_t start, end;
     time(&start);
-
-    if (argc != 2) {
-        fprintf(stderr, "Usage: serintode linear <input-file>\n");
-        return EXIT_FAILURE;
-    }
-    const char *finname = argv[1];
 
     mpz_t *S = NULL;
     long NUM_COEFFS = read_series(finname, MAX_COEFFS, &S);
