@@ -31,7 +31,7 @@ int main()
     long COLUMNS=0L, ROWS=0L;
     long i,j,k,n, nonzeroterms,ordersused,termsused, MAX_FOUND_POLY_ORDER,MAX_FOUND_ODE_ORDER,MIN_MAX_FOUND_POLY_ORDER, mintermsused,bestnulldim,firstterm,firstorder, finalorders;
     long nulldim=0L;
-    char input_string[MAX_LINE_LENGTH+1L];
+    char *input_string;
     mpz_t *S, *M, *N, temp, temp2,coeff;
     FILE *fin=NULL, *fouteqs=NULL; //, *foutsum=NULL
     char *fgcheck, nulldimflag=0;
@@ -50,8 +50,9 @@ int main()
     
     S = (mpz_t*) malloc(MAX_COEFFS*sizeof(mpz_t));
     M = (mpz_t*) malloc(MAX_COEFFS*MAX_COEFFS*sizeof(mpz_t)); //Maximum number needed below
-    
-    if((S == NULL) || (M == NULL))
+    input_string = (char*) malloc((MAX_LINE_LENGTH+1L)*sizeof(char));
+
+    if((S == NULL) || (M == NULL) || (input_string == NULL))
     {
         fprintf(stderr, "No memory left for allocating with malloc for input matrices. %s",strerror(errno));
         fclose(fin);
@@ -109,8 +110,9 @@ int main()
         }
     }
     fclose(fin);
-        
-    /*    
+    free(input_string);
+
+    /*
     printf("Input S Matrix:\n");
     for (i=0L;i<NUM_COEFFS;i++)
     {

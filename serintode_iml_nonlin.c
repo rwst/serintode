@@ -57,7 +57,7 @@ int main()
     long i,j,k,l,m,n,p,numterms=0L,maxnumterms=0L,ordermaxnumterms=0L,first,MAX_DEPTH_POSS,nonzeroterms,ordersused,termsused, MAX_FOUND_POLY_ORDER,firstterm, firstorder,mintermsused,MIN_MAX_FOUND_POLY_ORDER,MIN_MAX_FOUND_DEPTH, bestnulldim,finalorders, MAX_FOUND_DEPTH,MAX_FOUND_ODE_ORDER;
     long nulldim=0L;
     long **orderexp, *s, arrindex=0L;
-    char input_string[MAX_LINE_LENGTH+1L];
+    char *input_string;
     mpz_t *I, **D, **S, *M, *N, temp, temp2,coeff, *temparray;
     FILE *fin=NULL, *fouteqs=NULL; //, *foutsum=NULL
     char *fgcheck, nulldimflag=0;
@@ -79,8 +79,9 @@ int main()
     I = (mpz_t *) malloc(MAX_COEFFS*sizeof(mpz_t));
     M = (mpz_t *) malloc(MAX_COEFFS*MAX_COEFFS*sizeof(mpz_t)); //Maximum number needed below
     temparray = (mpz_t *) malloc(MAX_COEFFS*sizeof(mpz_t));
-    
-    if((I == NULL) || (M == NULL) || (temparray==NULL))
+    input_string = (char*) malloc((MAX_LINE_LENGTH+1L)*sizeof(char));
+
+    if((I == NULL) || (M == NULL) || (temparray==NULL) || (input_string==NULL))
     {
         fprintf(stderr, "No memory left for allocating I, M, or temparray. %s",strerror(errno));
         fclose(fin);
@@ -143,6 +144,7 @@ int main()
         }
     }
     fclose(fin);
+    free(input_string);
     printf("\nChecking %s:\n",finname);
     
     MAX_ODE_ORDER=NUM_COEFFS-NUM_CHECKS-1L;     

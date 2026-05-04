@@ -33,11 +33,9 @@ data file — they are robustness, correctness, and quality items.
       line is silently split into two coefficients. Only matters for
       coefficients with ≥99999 digits.
 
-- [ ] `input_string` is a `MAX_LINE_LENGTH+1` (= 100001 byte) stack array in
-      every program. Safe today under the default 8 MB Linux stack, but a
-      footgun if anyone bumps `MAX_LINE_LENGTH`. Move to `malloc`/`free`.
-  - `serintode_iml.c:34`, `serintode_flint.c:36`,
-    `serintode_iml_nonlin.c:60`, `serintode_iml_nonlin_lookup.c:36`
+- [x] Moved `input_string` from a `MAX_LINE_LENGTH+1` stack array to a
+      `malloc`'d buffer (free'd right after `fclose(fin)`) in the three IML
+      programs. (FLINT version out of scope.)
 
 ## Latent buffer overflows (not reachable from input data)
 
