@@ -18,18 +18,13 @@ There are four independent main programs, each a single `.c` file with `int main
 
 ## Build
 
-There is no build system; compile each program directly with gcc. On this
-machine IML lives under `/home/ralf/math/iml`, so the IML programs need
-`-I` / `-L` overrides — the README's plain `-liml` won't find it:
-
 ```
-gcc -Wall serintode_iml.c              -o serintode_iml.o              -I /home/ralf/math/iml/include -L /home/ralf/math/iml/lib64 -liml -lcblas -lgmp -lm
-gcc -Wall serintode_iml_nonlin.c       -o serintode_iml_nonlin.o       -I /home/ralf/math/iml/include -L /home/ralf/math/iml/lib64 -liml -lcblas -lgmp -lm
-gcc -Wall serintode_iml_nonlin_lookup.c -o serintode_iml_nonlin_lookup.o -I /home/ralf/math/iml/include -L /home/ralf/math/iml/lib64 -liml -lcblas -lgmp -lm
-gcc -Wall makelookup.c                 -o makelookup                   -lgmp -lm
+make            # builds all four programs
+make test       # runs the regression suite
+make clean
 ```
 
-The `.o` extension is misleading — these are full executables. Library install instructions (IML, GMP, ATLAS) are in `README.txt`.
+Override `IML_DIR=/path/to/iml` if IML lives somewhere other than `/home/ralf/math/iml`. The `.o` extension on the binaries is misleading — these are full executables. Library install instructions (IML, GMP, ATLAS) are in `README.txt`.
 
 ## How to run
 
@@ -56,7 +51,7 @@ long const MAX_LINE_LENGTH = 100000L;
 
 Output: when a solution is found, the program writes `<finname>_solution_<NUM_CHECKS>-checks.txt` (linear) or `<finname>_nonlinsol_<NUM_CHECKS>-checks.txt` (nonlin) in Maple syntax, alongside printing it to stdout.
 
-There is no test suite.
+`make test` runs `serintode_iml.o` and `serintode_iml_nonlin.o` against `tests/central_binomials.txt`, diffing the resulting output files against the baselines in `tests/expected/`. New regressions go there.
 
 ## Architecture notes worth knowing before editing
 
